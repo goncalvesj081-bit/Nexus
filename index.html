@@ -1,0 +1,2757 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>NEXUS FC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#0A0D12;
+    --surface:#131822;
+    --surface-2:#1B222E;
+    --surface-3:#222B3A;
+    --line:#262F3D;
+    --text:#E7EBF0;
+    --text-dim:#8590A3;
+    --text-faint:#5A6478;
+    --c-def:#4C8DFF;
+    --c-def-glow: rgba(76,141,255,.35);
+    --c-mei:#A78BFA;
+    --c-mei-glow: rgba(167,139,250,.35);
+    --c-ata:#FF5468;
+    --c-ata-glow: rgba(255,84,104,.35);
+    --nexo:#17E3C4;
+    --nexo-glow: rgba(23,227,196,.45);
+    --gold:#D8B76A;
+    --danger:#FF5468;
+    --font-display:'Rajdhani', sans-serif;
+    --font-body:'Inter', sans-serif;
+    --font-mono:'JetBrains Mono', monospace;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--font-body);height:100%;overflow-x:hidden;}
+  body{
+    background-image:
+      radial-gradient(circle at 15% 10%, rgba(23,227,196,0.06), transparent 40%),
+      radial-gradient(circle at 85% 85%, rgba(167,139,250,0.06), transparent 40%);
+    min-height:100vh;
+  }
+  #app{max-width:520px; margin:0 auto; min-height:100vh; display:flex; flex-direction:column; position:relative;}
+
+  ::-webkit-scrollbar{width:6px;}
+  ::-webkit-scrollbar-thumb{background:var(--line); border-radius:3px;}
+
+  h1,h2,h3{font-family:var(--font-display); font-weight:700; margin:0; letter-spacing:.02em;}
+  .mono{font-family:var(--font-mono);}
+  .screen{display:none; flex-direction:column; flex:1; padding:20px 18px 32px;}
+  #screen-reveal{position:relative;}
+  .screen.active{display:flex; animation:fadeIn .55s ease;}
+  @keyframes fadeIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+
+  /* ---------- Topbar ---------- */
+  .topbar{display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--line);}
+  .brand{display:flex; align-items:center; gap:8px;}
+  .brand-mark{width:26px;height:26px;border-radius:6px;background:linear-gradient(135deg,var(--nexo),var(--c-mei)); display:flex;align-items:center;justify-content:center; font-family:var(--font-display); font-weight:700; font-size:13px; color:#0A0D12;}
+  .brand-name{font-family:var(--font-display); font-weight:700; font-size:17px; letter-spacing:.08em;}
+  .brand-name span{color:var(--nexo);}
+  .placar-mini{font-family:var(--font-mono); font-size:13px; color:var(--text-dim); display:flex; gap:10px; align-items:center;}
+  .placar-mini b{color:var(--text); font-size:15px;}
+
+  /* ---------- Buttons ---------- */
+  .btn{
+    font-family:var(--font-display); font-weight:600; font-size:16px; letter-spacing:.03em;
+    border:none; border-radius:10px; padding:14px 20px; cursor:pointer; text-align:center;
+    transition:transform .12s ease, filter .12s ease; -webkit-user-select:none; user-select:none;
+  }
+  .btn:active{transform:scale(.97);}
+  .btn-primary{background:linear-gradient(135deg, var(--nexo), #0FBFA6); color:#04140F; box-shadow:0 4px 20px rgba(23,227,196,.25);}
+  .btn-secondary{background:var(--surface-2); color:var(--text); border:1px solid var(--line);}
+  .btn-gold{background:linear-gradient(135deg,var(--gold),#a8874a); color:#1a1206;}
+  .btn:disabled{opacity:.35; pointer-events:none;}
+  .btn-block{width:100%; display:block;}
+  .btn-row{display:flex; gap:10px;}
+  .btn-row .btn{flex:1;}
+
+  /* ---------- Home ---------- */
+  #screen-home{justify-content:space-between; align-items:center; text-align:center; padding-top:14vh;}
+  .home-top{display:flex; flex-direction:column; align-items:center; gap:18px;}
+  .logo-mark{
+    width:96px;height:96px;border-radius:22px;
+    background:linear-gradient(150deg,var(--surface-2),var(--surface));
+    border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;
+    position:relative; overflow:hidden;
+  }
+  .logo-mark::before{content:'';position:absolute; inset:0; background:conic-gradient(from 180deg, var(--nexo), transparent 30%, var(--c-mei), transparent 70%, var(--nexo)); opacity:.5; animation:spin 6s linear infinite;}
+  .logo-mark::after{content:'';position:absolute; inset:3px; border-radius:19px; background:var(--surface);}
+  .logo-mark span{position:relative; z-index:1; font-family:var(--font-display); font-weight:700; font-size:34px; background:linear-gradient(135deg,var(--nexo),#fff); -webkit-background-clip:text; background-clip:text; color:transparent;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .title-block h1{font-size:34px;}
+  .title-block .sub{font-family:var(--font-mono); font-size:12px; color:var(--nexo); letter-spacing:.25em; margin-top:6px;}
+  .home-menu{display:flex; flex-direction:column; gap:12px; width:100%; padding-bottom:20px;}
+  .tagline{color:var(--text-dim); font-size:13px; max-width:280px; line-height:1.5; margin-top:10px;}
+
+  /* ---------- Section labels ---------- */
+  .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:.15em; color:var(--nexo); text-transform:uppercase; margin-bottom:4px;}
+  .section-title{font-size:22px; margin-bottom:2px;}
+  .section-desc{color:var(--text-dim); font-size:13px; margin-bottom:16px;}
+
+  /* ---------- Deck builder ---------- */
+  .deck-progress{display:flex; gap:8px; margin-bottom:14px;}
+  .deck-progress .chip{flex:1; background:var(--surface-2); border:1px solid var(--line); border-radius:8px; padding:8px; text-align:center;}
+  .deck-progress .chip .n{font-family:var(--font-mono); font-size:18px; font-weight:700;}
+  .deck-progress .chip .l{font-size:10px; color:var(--text-dim); letter-spacing:.08em;}
+  .pos-tabs{display:flex; gap:6px; margin-bottom:14px;}
+  .pos-tab{flex:1; padding:9px; border-radius:8px; text-align:center; font-family:var(--font-display); font-weight:600; font-size:13px; letter-spacing:.05em; border:1px solid var(--line); background:var(--surface); color:var(--text-dim); cursor:pointer;}
+  .pos-tab.active[data-pos="DEF"]{border-color:var(--c-def); color:var(--c-def); background:rgba(76,141,255,.08);}
+  .pos-tab.active[data-pos="MEI"]{border-color:var(--c-mei); color:var(--c-mei); background:rgba(167,139,250,.08);}
+  .pos-tab.active[data-pos="ATA"]{border-color:var(--c-ata); color:var(--c-ata); background:rgba(255,84,104,.08);}
+  .card-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; overflow-y:auto; flex:1; padding-bottom:10px;}
+
+  /* ---------- Card component (carta colecionável) ---------- */
+  .card{
+    position:relative; cursor:pointer; transition:transform .1s ease;
+    border-radius:14px;
+  }
+  .card:active{transform:scale(.97);}
+  .card.selected .tcard{box-shadow:0 0 0 2px var(--gold), 0 6px 22px rgba(216,183,106,.25);}
+  .card.selected::after{content:'✓'; position:absolute; top:-6px; right:-6px; width:20px;height:20px;border-radius:50%; background:var(--gold); color:#1a1206; font-size:12px; display:flex;align-items:center;justify-content:center; font-weight:700; z-index:3; box-shadow:0 2px 6px rgba(0,0,0,.4);}
+  .card.locked{opacity:.35; pointer-events:none;}
+  .card-grid .card{animation:cardIn .32s ease both; animation-delay:calc(var(--i,0)*22ms);}
+  @keyframes cardIn{from{opacity:0; transform:translateY(8px) scale(.97);} to{opacity:1; transform:translateY(0) scale(1);}}
+
+  /* moldura externa (borda dourada tipo carta premium) */
+  .tcard{
+    position:relative; aspect-ratio:0.72; border-radius:13px; padding:2px;
+    background:linear-gradient(160deg, var(--gold), rgba(216,183,106,.2) 45%, var(--line) 75%);
+  }
+  .tcard-face{
+    position:relative; height:100%; border-radius:11px; overflow:hidden;
+    display:flex; flex-direction:column;
+  }
+  .tcard-face::before{ /* brilho diagonal tipo foil */
+    content:''; position:absolute; inset:0; z-index:2; pointer-events:none;
+    background:linear-gradient(115deg, transparent 32%, rgba(255,255,255,.10) 46%, transparent 58%);
+  }
+  .tcard.pos-DEF .tcard-face{background:radial-gradient(120% 90% at 50% 0%, #1c3a6e 0%, #0d1a30 55%, #070d18 100%);}
+  .tcard.pos-MEI .tcard-face{background:radial-gradient(120% 90% at 50% 0%, #3d2d6e 0%, #1a1430 55%, #0d0a17 100%);}
+  .tcard.pos-ATA .tcard-face{background:radial-gradient(120% 90% at 50% 0%, #6e2530 0%, #2e0f14 55%, #190709 100%);}
+
+  .tcard-topline{position:relative; z-index:2; display:flex; align-items:flex-start; justify-content:space-between; padding:7px 7px 0;}
+  .tcard-pos-chip{font-family:var(--font-mono); font-size:8.5px; font-weight:700; letter-spacing:.09em; padding:2px 6px; border-radius:4px; background:rgba(0,0,0,.35); border:1px solid; line-height:1.6;}
+  .tcard.pos-DEF .tcard-pos-chip{color:var(--c-def); border-color:var(--c-def);}
+  .tcard.pos-MEI .tcard-pos-chip{color:var(--c-mei); border-color:var(--c-mei);}
+  .tcard.pos-ATA .tcard-pos-chip{color:var(--c-ata); border-color:var(--c-ata);}
+  .tcard-ovr{
+    width:28px;height:28px;border-radius:50%; border:2px solid var(--gold); background:rgba(0,0,0,.4);
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-display); font-weight:700; font-size:12px; color:var(--gold);
+  }
+
+  /* marca d'água geométrica no lugar da foto */
+  .tcard-emblem{position:absolute; z-index:1; left:50%; top:40%; width:62%; aspect-ratio:1; transform:translate(-50%,-50%) rotate(45deg); border:1px solid rgba(255,255,255,.07); border-radius:6px;}
+  .tcard-rarity{position:relative; z-index:2; text-align:center; font-family:var(--font-mono); font-size:7.5px; font-weight:700; letter-spacing:.12em; margin-top:1px;}
+  .tcard.compact .tcard-rarity, .tcard.mini .tcard-rarity{display:none;}
+  .tcard-emblem::before{content:''; position:absolute; inset:14%; border:1px solid rgba(255,255,255,.06); border-radius:5px;}
+
+  .tcard-name-wrap{position:relative; z-index:2; flex:1; display:flex; align-items:center; justify-content:center; padding:2px 8px; text-align:center;}
+  .tcard-name{
+    font-family:var(--font-display); font-weight:700; text-transform:uppercase; color:#fff;
+    line-height:1.08; letter-spacing:.01em; text-shadow:0 2px 10px rgba(0,0,0,.55);
+    font-size:14px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+  }
+
+  .tcard-stats-strip{position:relative; z-index:2; display:flex; background:rgba(0,0,0,.4); border-top:1px solid rgba(255,255,255,.1);}
+  .tcard-stats-strip .s{flex:1; text-align:center; padding:4px 2px;}
+  .tcard-stats-strip .s .v{display:block; font-family:var(--font-mono); font-weight:700; font-size:12.5px;}
+  .tcard-stats-strip .s .k{font-family:var(--font-mono); font-size:7px; color:var(--text-dim); letter-spacing:.06em;}
+  .tcard-stats-strip .s.atk .v{color:var(--c-ata);}
+  .tcard-stats-strip .s.def .v{color:var(--c-def);}
+  .tcard-stats-strip .s.ctrl .v{color:var(--c-mei);}
+
+  .tcard-ability{position:relative; z-index:2; padding:5px 7px 7px; font-size:8.3px; line-height:1.3; color:var(--text-dim); background:rgba(0,0,0,.28); border-top:1px dashed rgba(255,255,255,.08);}
+  .tcard-ability b{color:var(--gold); font-weight:600;}
+
+  /* variante compacta (usada na revelação de batalha / duelos) esconde a faixa de habilidade completa */
+  .tcard.compact .tcard-ability{display:none;}
+  .tcard.compact .tcard-name{font-size:12.5px;}
+
+  .sticky-footer{position:sticky; bottom:0; padding-top:12px; background:linear-gradient(to top, var(--bg) 60%, transparent);}
+
+  /* ---------- Transition / cover screens ---------- */
+  #screen-cover{align-items:center; justify-content:center; text-align:center; gap:10px;}
+  .cover-visual{position:relative; width:112px; height:112px; display:flex; align-items:center; justify-content:center; margin-bottom:6px;}
+  .cover-ring-svg{position:absolute; inset:0; width:100%; height:100%; transform:rotate(-90deg); display:none; pointer-events:none;}
+  .cover-ring-svg.show{display:block;}
+  .ring-track{fill:none; stroke:rgba(255,255,255,.08); stroke-width:5;}
+  .ring-fill{fill:none; stroke:var(--nexo); stroke-width:5; stroke-linecap:round; stroke-dasharray:282.74; stroke-dashoffset:0; filter:drop-shadow(0 0 4px var(--nexo-glow));}
+  .cover-ring-number{font-family:var(--font-mono); font-size:13px; color:var(--gold); font-weight:700; min-height:18px; letter-spacing:.05em;}
+
+  .cover-icon-wrap{position:relative; width:74px; height:74px; display:flex; align-items:center; justify-content:center;}
+  .cover-icon{width:66px;height:66px;border-radius:50%; background:var(--surface-2); border:2px solid var(--nexo); display:flex;align-items:center;justify-content:center; font-size:26px; position:relative; z-index:1; animation:pulse 1.8s ease-in-out infinite;}
+
+  /* ---------- Animação de "IA pensando" (Computador ataca/defende) ---------- */
+  .cover-thinking{display:none; position:relative; width:88px; height:88px; align-items:center; justify-content:center;}
+  .cover-thinking.active{display:flex;}
+  .cover-thinking-sweep{
+    position:absolute; inset:0; border-radius:50%;
+    background:conic-gradient(from 0deg, var(--nexo), transparent 30%, transparent 100%);
+    animation:spin 1.1s linear infinite;
+    -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+    mask:radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+  }
+  .cover-thinking-core{width:58px; height:58px; border-radius:50%; background:var(--surface-2); border:2px solid var(--nexo); display:flex; align-items:center; justify-content:center; font-size:24px; position:relative; z-index:1; animation:pulse 1.4s ease-in-out infinite;}
+  .cover-thinking-dot{position:absolute; width:6px; height:6px; border-radius:50%; background:var(--gold); box-shadow:0 0 7px var(--gold); animation:thinkDot 1.2s ease-in-out infinite;}
+  .cover-thinking-dot.d1{top:2px; left:calc(50% - 3px); animation-delay:0s;}
+  .cover-thinking-dot.d2{bottom:6px; left:4px; animation-delay:.3s;}
+  .cover-thinking-dot.d3{bottom:6px; right:4px; animation-delay:.6s;}
+  @keyframes thinkDot{0%,100%{opacity:.25; transform:scale(.8);} 50%{opacity:1; transform:scale(1.2);}}
+
+  /* ---------- Animação de "partida pronta" (bola no meio-campo, grama de verdade) ---------- */
+  .cover-kickoff{position:relative; width:120px; height:98px; display:none;}
+  .cover-kickoff.active{display:block;}
+  .cover-kickoff-ground{
+    position:absolute; bottom:8px; left:50%; transform:translateX(-50%);
+    width:92px; height:15px; border-radius:50%;
+    background:repeating-linear-gradient(90deg, #163a22 0px, #163a22 9px, #1c4d30 9px, #1c4d30 18px);
+    box-shadow:0 3px 10px rgba(0,0,0,.45);
+  }
+  .cover-kickoff-ground::after{content:''; position:absolute; top:50%; left:50%; width:4px; height:4px; border-radius:50%; background:rgba(255,255,255,.55); transform:translate(-50%,-50%);}
+  .cover-kickoff-shadow{position:absolute; bottom:12px; left:50%; width:20px; height:6px; border-radius:50%; background:rgba(0,0,0,.55); transform:translateX(-50%); animation:ballShadow 1.3s ease-in-out infinite; z-index:1;}
+  .cover-kickoff-ball{position:absolute; bottom:18px; left:50%; transform:translateX(-50%); font-size:30px; z-index:2; animation:ballBounce 1.3s ease-in-out infinite; filter:drop-shadow(0 2px 3px rgba(0,0,0,.4));}
+  @keyframes ballBounce{0%,100%{transform:translateX(-50%) translateY(0) rotate(0deg);} 50%{transform:translateX(-50%) translateY(-42px) rotate(30deg);}}
+  @keyframes ballShadow{0%,100%{transform:translateX(-50%) scale(1); opacity:.5;} 50%{transform:translateX(-50%) scale(.5); opacity:.18;}}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 var(--nexo-glow);} 50%{box-shadow:0 0 0 14px transparent;}}
+
+  /* ---------- Animação de duelo (tela "Revelar resultado") — os 6 jogadores num campo ---------- */
+  .cover-duel{
+    position:relative; width:100%; max-width:300px; height:236px; margin:0 auto;
+    border-radius:14px; overflow:hidden; display:none;
+    background:repeating-linear-gradient(90deg, #163a22 0px, #163a22 26px, #1a4429 26px, #1a4429 52px);
+    border:2px solid rgba(255,255,255,.12);
+  }
+  .cover-duel.active{display:block;}
+  .pitch-line-center{position:absolute; top:0; bottom:0; left:50%; width:2px; background:rgba(255,255,255,.4); transform:translateX(-50%); z-index:1;}
+  .pitch-circle{position:absolute; top:50%; left:50%; width:58px; height:58px; border:2px solid rgba(255,255,255,.35); border-radius:50%; transform:translate(-50%,-50%); z-index:1;}
+
+  .duel-slot{position:absolute; width:46px; z-index:2; animation-fill-mode:both;}
+  .duel-slot .tcard{width:100%;}
+  .duel-slot-inner{transition:transform .35s ease-in;}
+  .duel-slot[data-row="0"]{top:15%;}
+  .duel-slot[data-row="1"]{top:50%;}
+  .duel-slot[data-row="2"]{top:85%;}
+  .duel-slot.team-left{left:5%; animation-name:duelSlideLeft; animation-duration:.45s; animation-timing-function:cubic-bezier(.2,.9,.3,1);}
+  .duel-slot.team-right{right:5%; animation-name:duelSlideRight; animation-duration:.45s; animation-timing-function:cubic-bezier(.2,.9,.3,1);}
+  .duel-slot[data-row="1"]{animation-delay:.08s;}
+  .duel-slot[data-row="2"]{animation-delay:.16s;}
+  .duel-slot::after{content:''; position:absolute; inset:-5px; border-radius:12px; opacity:.35; animation:duelGlow 1.3s ease-in-out .5s infinite; pointer-events:none;}
+  .duel-slot.glow-DEF::after{box-shadow:0 0 16px var(--c-def-glow);}
+  .duel-slot.glow-MEI::after{box-shadow:0 0 16px var(--c-mei-glow);}
+  .duel-slot.glow-ATA::after{box-shadow:0 0 16px var(--c-ata-glow);}
+
+  .duel-flash{
+    position:absolute; top:50%; left:50%; width:46px; height:46px; border-radius:50%; z-index:3;
+    background:radial-gradient(circle, rgba(255,255,255,.95), var(--nexo) 45%, transparent 72%);
+    transform:translate(-50%,-50%); opacity:0;
+    animation:duelFlash 1.3s ease-out .5s infinite;
+  }
+  .duel-vs{
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); z-index:4;
+    font-family:var(--font-display); font-weight:700; font-size:17px; color:#fff;
+    animation:duelVsPop .4s ease-out .35s both, duelVsPulse 1.3s ease-in-out .5s infinite;
+  }
+  .duel-vs.tick{animation:tickFlash .3s ease-out;}
+  .duel-flash.burst{animation:duelBurst .5s ease-out;}
+  @keyframes tickFlash{0%{filter:brightness(2.4);} 100%{filter:brightness(1);}}
+  @keyframes duelBurst{0%{opacity:0; transform:translate(-50%,-50%) scale(.4);} 30%{opacity:1; transform:translate(-50%,-50%) scale(2.2);} 100%{opacity:0; transform:translate(-50%,-50%) scale(2.8);}}
+  @keyframes duelSlideLeft{ from{transform:translateY(-50%) translateX(-120px) rotate(-14deg); opacity:0;} to{transform:translateY(-50%) translateX(0) rotate(-4deg); opacity:1;} }
+  @keyframes duelSlideRight{ from{transform:translateY(-50%) translateX(120px) rotate(14deg); opacity:0;} to{transform:translateY(-50%) translateX(0) rotate(4deg); opacity:1;} }
+  @keyframes duelGlow{ 0%,100%{opacity:.2;} 50%{opacity:.75;} }
+  @keyframes duelFlash{ 0%{opacity:0; transform:translate(-50%,-50%) scale(.3);} 18%{opacity:.9; transform:translate(-50%,-50%) scale(1.6);} 100%{opacity:0; transform:translate(-50%,-50%) scale(2);} }
+  @keyframes duelVsPop{ from{transform:translate(-50%,-50%) scale(.4); opacity:0;} to{transform:translate(-50%,-50%) scale(1); opacity:1;} }
+  @keyframes duelVsPulse{ 0%,100%{text-shadow:0 0 8px var(--nexo);} 50%{text-shadow:0 0 18px var(--gold), 0 0 26px var(--nexo);} }
+
+  .cover-title{font-size:24px;}
+  .cover-sub{color:var(--text-dim); font-size:13px; max-width:260px;}
+
+  /* ---------- Battle selection ---------- */
+  .rodada-header{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .rodada-header .rlabel{font-family:var(--font-mono); font-size:11px; color:var(--text-dim); letter-spacing:.1em;}
+  .rodada-header .rturn{font-family:var(--font-display); font-weight:700; font-size:18px;}
+  .placar-big{display:flex; align-items:center; justify-content:center; gap:18px; margin-bottom:16px; padding:14px; background:var(--surface); border:1px solid var(--line); border-radius:12px;}
+  .placar-big .lado{text-align:center; flex:1;}
+  .placar-big .lado .nome{font-size:11px; color:var(--text-dim); font-family:var(--font-mono); margin-bottom:4px;}
+  .placar-big .lado .gols{font-family:var(--font-display); font-weight:700; font-size:34px;}
+  .placar-big .vs{font-family:var(--font-mono); font-size:11px; color:var(--text-faint);}
+
+  .slot-picker{display:flex; flex-direction:column; gap:10px; margin-bottom:12px;}
+  .slot-group{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:10px;}
+  .slot-group-label{font-family:var(--font-mono); font-size:10px; letter-spacing:.1em; margin-bottom:8px; display:flex; justify-content:space-between;}
+  .slot-options{display:flex; gap:6px; overflow-x:auto; padding:2px 2px 8px;}
+  .slot-options::-webkit-scrollbar{height:4px;}
+
+  /* mini carta usada no seletor de rodada (DEFESA/MEIO/ATAQUE) — largura travada em 3 pontos pra não estourar em flex */
+  .pick-tcard-wrap{
+    position:relative; cursor:pointer; transition:transform .1s ease; box-sizing:border-box;
+    flex:0 0 auto; width:74px; min-width:74px; max-width:74px;
+  }
+  .pick-tcard-wrap:active{transform:scale(.96);}
+  .pick-tcard-wrap .tcard{width:100%; box-sizing:border-box;}
+  .pick-tcard-wrap.selected .tcard{box-shadow:0 0 0 2px var(--gold), 0 6px 18px rgba(216,183,106,.25);}
+  .pick-tcard-wrap.selected::after{content:'✓'; position:absolute; top:-5px; right:-5px; width:16px;height:16px;border-radius:50%; background:var(--gold); color:#1a1206; font-size:10px; display:flex;align-items:center;justify-content:center; font-weight:700; z-index:4; box-shadow:0 2px 6px rgba(0,0,0,.4);}
+  .pick-tcard-wrap.fatigued{pointer-events:none;}
+  .pick-tcard-wrap.fatigued .tcard{filter:grayscale(.65) brightness(.55);}
+  .fatigue-stamp, .emergency-stamp{
+    position:absolute; top:40%; left:50%; transform:translate(-50%,-50%) rotate(-10deg);
+    font-family:var(--font-mono); font-weight:700; font-size:6.5px; letter-spacing:.02em;
+    padding:2px 4px; border-radius:4px; z-index:5; white-space:nowrap;
+  }
+  .fatigue-stamp{background:rgba(255,84,104,.18); border:1px solid var(--danger); color:var(--danger);}
+  .emergency-stamp{background:rgba(216,183,106,.2); border:1px solid var(--gold); color:var(--gold);}
+
+  .tcard.mini .tcard-topline{padding:4px 4px 0;}
+  .tcard.mini .tcard-pos-chip{font-size:6px; padding:1px 3px; border-width:1px;}
+  .tcard.mini .tcard-ovr{width:16px; height:16px; font-size:7.5px; border-width:1px;}
+  .tcard.mini .tcard-name{font-size:8.5px; letter-spacing:0;}
+  .tcard.mini .tcard-stats-strip .v{font-size:8px;}
+  .tcard.mini .tcard-stats-strip .k{font-size:5px;}
+  .tcard.mini .tcard-stats-strip .s{padding:2px 1px;}
+  .tcard.mini .tcard-emblem{opacity:.5;}
+
+  /* ---------- Feedback de rodada (match point, timer) ---------- */
+  .match-point{color:var(--danger); font-weight:700; animation:mpBlink 1.1s ease-in-out infinite;}
+  @keyframes mpBlink{0%,100%{opacity:1;} 50%{opacity:.45;}}
+  .tickpop{animation:tickPop .22s ease;}
+  @keyframes tickPop{0%{transform:scale(1.18);} 100%{transform:scale(1);}}
+
+  /* ---------- Confete na tela de resultado ---------- */
+  #screen-result{position:relative; overflow:hidden;}
+  .result-confetti{position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:5;}
+  .result-confetti .confetti-piece{animation-name:confettiFall; animation-timing-function:linear; animation-fill-mode:forwards;}
+
+  /* ---------- Como Jogar ---------- */
+  .rule-step{display:flex; gap:10px; align-items:flex-start; padding:10px 0; border-bottom:1px solid var(--line);}
+  .rule-step:last-child{border-bottom:none;}
+  .rule-step .rn{width:24px; height:24px; border-radius:50%; background:rgba(23,227,196,.12); border:1px solid var(--nexo); color:var(--nexo); font-family:var(--font-mono); font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;}
+  .rule-step .rt{font-size:12.5px; line-height:1.5; color:var(--text-dim);}
+  .rule-step .rt b{color:var(--text);}
+
+  /* ---------- Reveal / Nexo graph ---------- */
+  .trio-reveal{position:relative; margin-bottom:8px;}
+  .trio-row{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; position:relative; z-index:2;}
+  .nexo-svg{position:absolute; inset:0; width:100%; height:100%; z-index:1; overflow:visible;}
+  .nexo-svg line{stroke:var(--nexo); stroke-width:2; filter:drop-shadow(0 0 4px var(--nexo-glow));}
+  .nexo-svg text{font-family:var(--font-mono); font-size:9px; fill:var(--nexo); font-weight:700;}
+  .nexo-conn{opacity:0; transform:scale(.4); transform-box:fill-box; transform-origin:center; transition:opacity .3s ease, transform .3s cubic-bezier(.34,1.56,.64,1);}
+  .nexo-conn.show{opacity:1; transform:scale(1);}
+
+  /* ---------- Flip de cartas na revelação ---------- */
+  .flip-card{position:relative; aspect-ratio:0.72; perspective:700px;}
+  .flip-card-inner{position:absolute; inset:0; transform-style:preserve-3d; transition:transform .5s cubic-bezier(.3,.1,.2,1);}
+  .flip-card.flipped .flip-card-inner{transform:rotateY(180deg);}
+  .flip-card-face{position:absolute; inset:0; backface-visibility:hidden; -webkit-backface-visibility:hidden;}
+  .flip-card-face .tcard{width:100%; height:100%;}
+  .flip-card-back{
+    border-radius:13px; background:linear-gradient(160deg, var(--gold), rgba(216,183,106,.2) 45%, var(--line) 75%);
+    display:flex; align-items:center; justify-content:center; padding:2px;
+  }
+  .flip-card-back::before{content:''; position:absolute; inset:2px; border-radius:11px; background:radial-gradient(120% 100% at 50% 0%, var(--surface-2), var(--surface) 70%);}
+  .flip-card-back .cardback-mark{position:relative; z-index:1; font-family:var(--font-display); font-weight:700; font-size:22px; background:linear-gradient(135deg,var(--nexo),#fff); -webkit-background-clip:text; background-clip:text; color:transparent; opacity:.85;}
+  .flip-card-front{transform:rotateY(180deg);}
+
+  .score-box{display:flex; gap:10px; margin:14px 0;}
+  .score-side{flex:1; background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:12px; text-align:center;}
+  .score-side.winner{border-color:var(--nexo); box-shadow:0 0 0 1px var(--nexo);}
+  .score-side .role{font-family:var(--font-mono); font-size:10px; color:var(--text-dim); letter-spacing:.1em;}
+  .score-side .score{font-family:var(--font-display); font-weight:700; font-size:28px; margin:4px 0;}
+  .score-breakdown{font-size:9.5px; color:var(--text-faint); font-family:var(--font-mono); line-height:1.5; min-height:36px;}
+  .bd-line{opacity:0; transform:translateY(4px); transition:opacity .25s ease, transform .25s ease;}
+  .bd-line.show{opacity:1; transform:translateY(0);}
+
+  .result-banner{text-align:center; padding:12px; border-radius:10px; margin-bottom:14px; font-family:var(--font-display); font-weight:700; font-size:17px;}
+  .result-banner.gol{background:rgba(23,227,196,.12); color:var(--nexo); border:1px solid var(--nexo);}
+  .result-banner.nogol{background:var(--surface-2); color:var(--text-dim); border:1px solid var(--line);}
+  .result-banner.impact{animation:impactPop .4s cubic-bezier(.34,1.56,.64,1);}
+  @keyframes impactPop{0%{transform:scale(.7); opacity:0;} 60%{transform:scale(1.08); opacity:1;} 100%{transform:scale(1); opacity:1;}}
+
+  /* ---------- Celebração de GOL ---------- */
+  .goal-overlay, .save-overlay{
+    position:fixed; inset:0; display:none; align-items:center; justify-content:center; flex-direction:column;
+    z-index:30; pointer-events:none; overflow:hidden;
+  }
+  .goal-overlay.show, .save-overlay.show{display:flex;}
+  .goal-flash{position:absolute; inset:0; background:radial-gradient(circle, rgba(255,255,255,.5), transparent 60%); opacity:0;}
+  .goal-overlay.show .goal-flash{animation:goalFlash .5s ease-out;}
+  @keyframes goalFlash{0%{opacity:0;} 15%{opacity:1;} 100%{opacity:0;}}
+  .goal-ball-track{position:relative; width:120px; height:90px; display:flex; align-items:flex-end; justify-content:center;}
+  .goal-net{font-size:44px; position:relative; z-index:1;}
+  .goal-overlay.show .goal-net{animation:netShake .4s ease-in-out .5s;}
+  .goal-ball{position:absolute; bottom:-50px; left:50%; font-size:28px; transform:translateX(-50%); z-index:2; opacity:0;}
+  .goal-overlay.show .goal-ball{animation:ballToGoal .5s cubic-bezier(.3,.4,.2,1) forwards;}
+  @keyframes ballToGoal{0%{bottom:-50px; opacity:1; transform:translateX(-50%) scale(1) rotate(0deg);} 75%{bottom:6px; transform:translateX(-50%) scale(.9) rotate(180deg); opacity:1;} 100%{bottom:10px; transform:translateX(-50%) scale(.25) rotate(220deg); opacity:0;}}
+  @keyframes netShake{0%,100%{transform:translateX(0) rotate(0);} 25%{transform:translateX(-3px) rotate(-5deg);} 50%{transform:translateX(3px) rotate(5deg);} 75%{transform:translateX(-2px) rotate(-2deg);}}
+  .goal-burst{position:absolute; inset:0;}
+  .particle{position:absolute; top:50%; left:50%; width:7px; height:7px; border-radius:2px; opacity:1;}
+  .goal-overlay.show .particle{animation:particleFly .9s ease-out forwards;}
+  @keyframes particleFly{0%{transform:translate(-50%,-50%) scale(1); opacity:1;} 100%{transform:translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(.2); opacity:0;}}
+  .goal-confetti{position:absolute; inset:0; overflow:hidden;}
+  .confetti-piece{position:absolute; top:-12px; width:7px; height:12px; opacity:.95;}
+  .goal-overlay.show .confetti-piece{animation-name:confettiFall; animation-timing-function:linear; animation-fill-mode:forwards;}
+  @keyframes confettiFall{0%{transform:translateY(0) rotate(0deg); opacity:1;} 100%{transform:translateY(260px) rotate(540deg); opacity:0;}}
+  .goal-text, .save-text{
+    font-family:var(--font-display); font-weight:700; font-size:34px; margin-top:8px; opacity:0; transform:scale(.3);
+    text-align:center; padding:0 20px;
+  }
+  .goal-text{color:#fff; text-shadow:0 0 22px var(--nexo), 0 4px 10px rgba(0,0,0,.6);}
+  .save-text{color:var(--text-dim); text-shadow:0 4px 10px rgba(0,0,0,.5);}
+  .goal-overlay.show .goal-text, .save-overlay.show .save-text{animation:goalTextPop .5s cubic-bezier(.34,1.56,.64,1) .3s forwards;}
+  @keyframes goalTextPop{0%{opacity:0; transform:scale(.3) rotate(-8deg);} 60%{opacity:1; transform:scale(1.15) rotate(3deg);} 100%{opacity:1; transform:scale(1) rotate(0deg);}}
+
+  /* ---------- Celebração de DEFESA ---------- */
+  .save-net-wrap{position:relative; width:100px; height:70px; display:flex; align-items:center; justify-content:center;}
+  .save-net{font-size:42px; position:relative;}
+  .save-overlay.show .save-net{animation:netShake .4s ease-in-out;}
+  .save-glove{position:absolute; font-size:24px; right:-10px; bottom:-8px; opacity:0;}
+  .save-overlay.show .save-glove{animation:gloveSwipe .4s ease-out;}
+  @keyframes gloveSwipe{0%{transform:translate(18px,10px) rotate(20deg); opacity:0;} 60%{transform:translate(-4px,-4px) rotate(-10deg); opacity:1;} 100%{transform:translate(0,0) rotate(0deg); opacity:1;}}
+
+  /* ---------- Reação de lamento (resultado ruim para o jogador) ---------- */
+  .lament-overlay{position:fixed; inset:0; display:none; align-items:center; justify-content:center; flex-direction:column; z-index:30; pointer-events:none; overflow:hidden;}
+  .lament-overlay.show{display:flex;}
+  .lament-overlay::before{content:''; position:absolute; inset:0; background:radial-gradient(circle, rgba(255,84,104,.14), transparent 65%); opacity:0;}
+  .lament-overlay.show::before{animation:lamentVignette .5s ease-out;}
+  @keyframes lamentVignette{0%{opacity:0;} 30%{opacity:1;} 100%{opacity:.4;}}
+  .lament-icon{font-size:44px; opacity:0;}
+  .lament-overlay.show .lament-icon{animation:lamentDrop .5s ease-out forwards;}
+  @keyframes lamentDrop{0%{opacity:0; transform:translateY(-10px) rotate(0deg);} 55%{opacity:1; transform:translateY(4px) rotate(-10deg);} 100%{opacity:.9; transform:translateY(0) rotate(0deg);}}
+  .lament-text{font-family:var(--font-display); font-weight:700; font-size:25px; color:var(--text-dim); margin-top:10px; opacity:0; transform:scale(.6); text-align:center; padding:0 20px;}
+  .lament-overlay.show .lament-text{animation:lamentTextIn .45s ease-out .25s forwards;}
+  @keyframes lamentTextIn{0%{opacity:0; transform:scale(.6);} 100%{opacity:1; transform:scale(1);}}
+
+  /* ---------- Result screen ---------- */
+  .trophy{width:80px;height:80px;border-radius:50%; background:linear-gradient(135deg,var(--gold),#8a6a2f); display:flex;align-items:center;justify-content:center; font-size:36px; margin:0 auto 16px; box-shadow:0 0 40px rgba(216,183,106,.35);}
+  .winner-name{text-align:center; font-size:26px; margin-bottom:4px;}
+  .final-score{text-align:center; font-family:var(--font-mono); color:var(--text-dim); margin-bottom:22px;}
+  .highlight-box{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:12px;}
+  .highlight-box h3{font-size:14px; margin-bottom:8px; color:var(--nexo);}
+  .highlight-row{display:flex; justify-content:space-between; font-size:12.5px; padding:6px 0; border-bottom:1px solid var(--line);}
+  .highlight-row:last-child{border-bottom:none;}
+  .highlight-row .hv{font-family:var(--font-mono); color:var(--gold); font-weight:700;}
+
+  .footer-note{margin-top:auto; text-align:center; font-size:10.5px; color:var(--text-faint); padding-top:18px;}
+
+  /* ---------- Copa do Mundo ---------- */
+  .wc-team-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; overflow-y:auto; flex:1; padding-bottom:10px;}
+  .wc-team-card{background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:10px; display:flex; align-items:center; gap:8px; cursor:pointer;}
+  .wc-team-card:active{transform:scale(.97);}
+  .wc-team-badge{width:34px; height:34px; border-radius:50%; background:var(--surface-3); border:1.5px solid var(--gold); display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:8.5px; font-weight:700; color:var(--gold); flex-shrink:0;}
+  .wc-team-name{font-family:var(--font-display); font-weight:600; font-size:13px;}
+
+  .wc-phase-title{font-size:20px; margin-bottom:2px;}
+  .wc-group-name{font-family:var(--font-mono); font-size:11px; color:var(--nexo); letter-spacing:.1em; margin-bottom:10px;}
+  .wc-table{width:100%; border-collapse:collapse; font-size:11px; margin-bottom:16px;}
+  .wc-table th{font-family:var(--font-mono); font-size:9px; color:var(--text-dim); text-align:center; padding:5px 3px; border-bottom:1px solid var(--line);}
+  .wc-table th:first-child{text-align:left;}
+  .wc-table td{text-align:center; padding:6px 3px; border-bottom:1px solid var(--line); font-family:var(--font-mono);}
+  .wc-table td:first-child{text-align:left; font-family:var(--font-display); font-weight:600; font-size:11.5px;}
+  .wc-table tr.me{background:rgba(23,227,196,.08);}
+  .wc-table tr.me td:first-child{color:var(--nexo);}
+  .wc-table td.pts{color:var(--gold); font-weight:700;}
+  .wc-table tr.qualified td:first-child::after{content:' ✓'; color:var(--nexo);}
+
+  /* ---------- Mata-mata: cards de chaveamento ---------- */
+  .wc-ko-grid{display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-bottom:14px;}
+  .wc-ko-grid.cols-1{grid-template-columns:1fr;}
+  .wc-ko-card{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:9px 10px 8px; position:relative; animation:cardIn .3s ease both; animation-delay:calc(var(--i,0)*25ms);}
+  .wc-ko-card.me{border-color:var(--gold); background:linear-gradient(160deg, rgba(216,183,106,.09), var(--surface) 65%);}
+  .wc-ko-tag{position:absolute; top:-7px; right:8px; font-family:var(--font-mono); font-size:7px; font-weight:700; letter-spacing:.08em; color:var(--gold); background:var(--bg); border:1px solid var(--gold); padding:1.5px 5px; border-radius:4px;}
+  .wc-ko-team{display:flex; align-items:center; gap:6px; padding:4.5px 0; font-size:12px;}
+  .wc-ko-team + .wc-ko-team{border-top:1px solid var(--line);}
+  .wc-ko-team .cod{font-family:var(--font-mono); font-size:7.5px; font-weight:700; color:var(--text-faint); width:24px; flex-shrink:0;}
+  .wc-ko-team .nm{flex:1; font-family:var(--font-display); font-weight:600; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;}
+  .wc-ko-team .sc{font-family:var(--font-mono); font-weight:700; font-size:12.5px; color:var(--text-faint);}
+  .wc-ko-team.win .nm{color:var(--text);}
+  .wc-ko-team.win .sc{color:var(--gold);}
+  .wc-ko-pen{font-family:var(--font-mono); font-size:7.5px; color:var(--text-faint); margin-top:4px; text-align:right;}
+
+  .wc-next-box{background:linear-gradient(160deg, rgba(216,183,106,.12), var(--surface)); border:1px solid var(--gold); border-radius:12px; padding:16px; text-align:center; margin-bottom:16px;}
+  .wc-next-box .lbl{font-family:var(--font-mono); font-size:10px; color:var(--gold); letter-spacing:.1em; margin-bottom:6px;}
+  .wc-next-box .matchup{font-family:var(--font-display); font-weight:700; font-size:18px;}
+
+  /* ---------- Craque da Bola ---------- */
+  .duel-card{cursor:pointer; transition:transform .1s ease;}
+  .duel-card:active{transform:scale(.96);}
+  #craque-timer{transition:border-color .2s ease, color .2s ease;}
+  #craque-timer.urgent{border-color:var(--danger); color:var(--danger); animation:pulse 0.6s ease-in-out infinite;}
+  /* ---------- Auth / Loading ---------- */
+  .auth-box{width:100%; max-width:320px; display:flex; flex-direction:column; gap:10px;}
+  .auth-input{width:100%; box-sizing:border-box; padding:13px 14px; border-radius:10px; border:1px solid var(--line); background:var(--surface-2); color:var(--text); font-family:var(--font-body); font-size:15px;}
+  .auth-input:focus{outline:none; border-color:var(--nexo);}
+  .auth-msg{min-height:18px; font-size:13px; color:var(--text-dim);}
+  .spinner{width:34px; height:34px; border-radius:50%; border:3px solid var(--line); border-top-color:var(--nexo); animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .logout-link{position:absolute; top:16px; right:18px; font-size:12px; color:var(--text-faint); text-decoration:underline; cursor:pointer; background:none; border:none; font-family:var(--font-body);}
+
+  /* ==========================================================================
+     DESKTOP — só entra em telas largas; mobile (abaixo de 860px) fica intocado
+     ========================================================================== */
+  @media (min-width:860px){
+    #app{max-width:860px; padding:0 24px;}
+    .screen{padding:34px 6px 44px;}
+
+    /* cabeçalhos e textos gerais um pouco maiores */
+    .section-title{font-size:28px;}
+    .eyebrow{font-size:12px;}
+    .section-desc{font-size:14.5px; max-width:520px !important;}
+    .rodada-header .rturn{font-size:22px;}
+    .rodada-header .rlabel{font-size:12px;}
+    .placar-mini{font-size:15px;}
+    .placar-mini b{font-size:17px;}
+
+    /* grid de coleção / deck builder: mais colunas, cartas maiores */
+    .card-grid{grid-template-columns:repeat(4, 1fr); gap:16px;}
+
+    /* trio de escolha (Rodada X — pick de Ataque/Defesa): cartas bem maiores */
+    .slot-picker{gap:16px;}
+    .slot-group{padding:16px 18px;}
+    .slot-group-label{font-size:11.5px; margin-bottom:12px;}
+    .slot-options{gap:14px; overflow-x:visible; flex-wrap:wrap; padding:2px 2px 4px;}
+    .pick-tcard-wrap{width:126px; min-width:126px; max-width:126px;}
+    .tcard.mini .tcard-topline{padding:8px 8px 0;}
+    .tcard.mini .tcard-pos-chip{font-size:9.5px; padding:2px 6px;}
+    .tcard.mini .tcard-ovr{width:26px; height:26px; font-size:11px;}
+    .tcard.mini .tcard-name{font-size:13px;}
+    .tcard.mini .tcard-stats-strip .v{font-size:12.5px;}
+    .tcard.mini .tcard-stats-strip .k{font-size:7.5px;}
+    .tcard.mini .tcard-rarity{display:block; font-size:8px;}
+
+    /* trio da tela de Revelação e Duelos (Craque da Bola): sem isso a carta
+       ocupa a largura inteira do app e a proporção (0.72) explode a altura */
+    .trio-row{max-width:640px; margin:0 auto; gap:16px;}
+
+    /* home / menus centralizados ficam um pouco mais largos */
+    .home-menu{max-width:380px !important;}
+    .auth-box{max-width:360px;}
+
+    /* botões com um pouco mais de respiro */
+    .btn{padding:15px 18px; font-size:15px;}
+
+    /* o botão fixo (Confirmar Trio / Próxima Rodada) parava grudando em cima
+       do conteúdo no desktop — aqui ele deixa de ser "sticky" e passa a fluir
+       normalmente depois do conteúdo, então nunca mais sobrepõe nada */
+    .sticky-footer{position:static; background:none; padding-top:0; margin-top:28px;}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ===================== BOOT (checando login) ===================== -->
+  <div id="screen-boot" class="screen active" style="justify-content:center; align-items:center; gap:14px;">
+    <div class="spinner"></div>
+    <div style="color:var(--text-dim); font-size:14px;">Carregando NEXUS FC…</div>
+  </div>
+
+  <!-- ===================== LOGIN / CADASTRO ===================== -->
+  <div id="screen-auth" class="screen" style="justify-content:center; align-items:center; text-align:center; gap:16px;">
+    <div class="logo-mark"><span>N</span></div>
+    <h1 style="margin:0;">NEXUS <span style="color:var(--nexo)">FC</span></h1>
+    <div class="section-desc" style="max-width:300px;">Entre com seu e-mail pra salvar sua coleção e continuar seus campeonatos de qualquer aparelho.</div>
+    <div class="auth-box">
+      <input class="auth-input" type="email" id="auth-email" placeholder="seu@email.com" autocomplete="email">
+      <input class="auth-input" type="password" id="auth-senha" placeholder="Senha (mín. 6 caracteres)" autocomplete="current-password">
+      <div class="auth-msg" id="auth-msg"></div>
+      <button class="btn btn-primary btn-block" onclick="nexusLogin()">Entrar</button>
+      <button class="btn btn-secondary btn-block" onclick="nexusCadastrar()">Criar conta</button>
+    </div>
+  </div>
+
+  <!-- ===================== HOME ===================== -->
+  <div id="screen-home" class="screen" style="position:relative;">
+    <button class="logout-link" onclick="nexusLogout()">Sair</button>
+    <div class="home-top">
+      <div class="logo-mark"><span>N</span></div>
+      <div class="title-block">
+        <h1>NEXUS <span style="color:var(--nexo)">FC</span></h1>
+        <div class="sub">CONEXÕES DECIDEM O JOGO</div>
+      </div>
+      <div class="tagline">Monte trios, ative NEXOS e vença pela sinergia — não pela força bruta das cartas.</div>
+    </div>
+    <div class="home-menu">
+      <button class="btn btn-primary btn-block" onclick="showJogarCategorias()">▶ Jogar</button>
+      <button class="btn btn-secondary btn-block" onclick="showCollection()">📁 Coleção</button>
+      <button class="btn btn-secondary btn-block" onclick="showComoJogar()">❓ Como Jogar</button>
+    </div>
+  </div>
+
+  <!-- ===================== CATEGORIA: PARTIDA ÚNICA x MODO CAMPEONATO ===================== -->
+  <div id="screen-jogar-categorias" class="screen" style="justify-content:center; align-items:center; text-align:center; gap:14px;">
+    <div class="eyebrow">COMO VOCÊ QUER JOGAR</div>
+    <h2 class="section-title" style="margin-bottom:18px;">Escolha o formato</h2>
+    <div class="home-menu" style="max-width:320px;">
+      <button class="btn btn-primary btn-block" onclick="showModeSelect()">🎮 Partida Única</button>
+      <button class="btn btn-gold btn-block" onclick="showCampeonatoSelect()">🏆 Modo Campeonato</button>
+      <button class="btn btn-secondary btn-block" style="margin-top:8px;" onclick="goHome()">← Voltar</button>
+    </div>
+  </div>
+
+  <!-- ===================== MODO CAMPEONATO: LISTA DE TORNEIOS ===================== -->
+  <div id="screen-campeonato-select" class="screen" style="justify-content:center; align-items:center; text-align:center; gap:14px;">
+    <div class="eyebrow" style="color:var(--gold)">MODO CAMPEONATO</div>
+    <h2 class="section-title" style="margin-bottom:6px;">Escolha o torneio</h2>
+    <div class="section-desc" style="max-width:320px; margin-bottom:8px;">Mais campeonatos chegam nas próximas versões.</div>
+    <div class="home-menu" style="max-width:320px;">
+      <button class="btn btn-primary btn-block" id="wc-continuar-btn" style="display:none;" onclick="nexusContinuarCopa()">▶ Continuar Copa</button>
+      <button class="btn btn-gold btn-block" onclick="wcAbrirSelecaoDeTime()">🏆 Copa do Mundo <span style="opacity:.7; font-size:12px;">(48 seleções)</span></button>
+      <button class="btn btn-secondary btn-block" style="margin-top:8px;" onclick="showJogarCategorias()">← Voltar</button>
+    </div>
+  </div>
+
+  <!-- ===================== MODE SELECT (PARTIDA ÚNICA) ===================== -->
+  <div id="screen-modeselect" class="screen" style="justify-content:center; align-items:center; text-align:center; gap:14px;">
+    <div class="eyebrow">PARTIDA ÚNICA</div>
+    <h2 class="section-title" style="margin-bottom:18px;">Como você quer jogar?</h2>
+    <div class="home-menu" style="max-width:320px;">
+      <button class="btn btn-primary btn-block" onclick="selectMode('classic')">🤖 Modo Clássico <span style="opacity:.7; font-size:12px;">(vs Computador)</span></button>
+      <button class="btn btn-gold btn-block" onclick="selectMode('craque')">🔥 Craque da Bola <span style="opacity:.75; font-size:12px;">(vs Computador)</span></button>
+      <button class="btn btn-secondary btn-block" onclick="selectMode('friend')">👥 Dois Jogadores (mesmo aparelho)</button>
+      <button class="btn btn-secondary btn-block" style="margin-top:8px;" onclick="showJogarCategorias()">← Voltar</button>
+    </div>
+  </div>
+
+  <!-- ===================== COPA DO MUNDO: DIFICULDADE DA CONVOCAÇÃO ===================== -->
+  <div id="screen-wc-dificuldade" class="screen" style="justify-content:center; align-items:center; text-align:center; gap:14px;">
+    <div class="eyebrow" style="color:var(--gold)" id="wc-dificuldade-eyebrow">CONVOCAÇÃO DA COPA</div>
+    <h2 class="section-title" style="margin-bottom:6px;" id="wc-dificuldade-titulo">Escolha 24 de 48</h2>
+    <div class="section-desc" style="max-width:320px; margin-bottom:8px;" id="wc-dificuldade-desc">Essa convocação vale a Copa inteira. Antes de cada partida você escolhe os 12 titulares dentro desses 24.</div>
+    <div class="home-menu" style="max-width:320px;">
+      <button class="btn btn-primary btn-block" onclick="wcEscolherDificuldade('normal')">🤖 Normal <span style="opacity:.7; font-size:12px;">(escolha livre)</span></button>
+      <button class="btn btn-gold btn-block" onclick="wcEscolherDificuldade('craque')">🔥 Craque da Bola <span style="opacity:.75; font-size:12px;">(duelos, 7s cada)</span></button>
+      <button class="btn btn-secondary btn-block" style="margin-top:8px;" onclick="wcVoltarDificuldade()">← Voltar</button>
+    </div>
+  </div>
+
+  <!-- ===================== CRAQUE DA BOLA (deck builder por duelos) ===================== -->
+  <div id="screen-craque" class="screen">
+    <div class="topbar" style="margin:-20px -18px 8px; padding:14px 18px;">
+      <button class="btn btn-secondary" style="padding:8px 14px; font-size:13px;" onclick="craqueVoltar()">← Voltar</button>
+      <div class="brand-name">CRAQUE DA BOLA</div>
+      <div style="width:70px;"></div>
+    </div>
+    <div class="eyebrow" style="color:var(--gold)">🔥 CRAQUE DA BOLA</div>
+    <h2 class="section-title" id="craque-progress">Escolha 1 de 12</h2>
+    <div class="section-desc" id="craque-pos-label">Posição: Defensor</div>
+
+    <div style="display:flex; justify-content:center; margin:10px 0 18px;">
+      <div id="craque-timer" style="width:56px;height:56px;border-radius:50%; border:3px solid var(--nexo); display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-weight:700; font-size:22px;">7</div>
+    </div>
+
+    <div class="trio-row" style="grid-template-columns:1fr 1fr; gap:14px;" id="craque-duel">
+      <!-- duas cartas de duelo renderizadas via JS -->
+    </div>
+
+    <div class="footer-note" id="craque-footer-note" style="margin-top:22px;">Toque em uma carta antes que o tempo acabe. Se o tempo esgotar, nenhuma das duas entra no seu deck.</div>
+  </div>
+
+  <!-- ===================== COMO JOGAR ===================== -->
+  <div id="screen-comojogar" class="screen">
+    <div class="topbar" style="margin:-20px -18px 16px; padding:14px 18px;">
+      <button class="btn btn-secondary" style="padding:8px 14px; font-size:13px;" onclick="goHome()">← Voltar</button>
+      <div class="brand-name">COMO JOGAR</div>
+      <div style="width:70px;"></div>
+    </div>
+    <div class="highlight-box">
+      <h3>⚽ O básico</h3>
+      <div class="rule-step"><div class="rn">1</div><div class="rt">Monte seu deck e, a cada rodada, escolha em segredo um <b>trio</b>: 1 defensor, 1 meia e 1 atacante.</div></div>
+      <div class="rule-step"><div class="rn">2</div><div class="rt">Quem ataca soma <b>Ataque do atacante + metade do Controle do meia + NEXOS</b>. Quem defende soma <b>Defesa do zagueiro + metade do Controle do meia + NEXOS</b>. Maior número vence — empate favorece a defesa.</div></div>
+      <div class="rule-step"><div class="rn">3</div><div class="rt">Primeiro a marcar <b>3 gols</b> vence a partida. O papel de atacante alterna a cada rodada.</div></div>
+    </div>
+    <div class="highlight-box">
+      <h3>⚡ NEXOS — o coração do jogo</h3>
+      <div class="rule-step"><div class="rn">+5</div><div class="rt"><b>Mesmo Clube</b> ou <b>Companheiros</b> de carreira.</div></div>
+      <div class="rule-step"><div class="rn">+3</div><div class="rt"><b>Mesma Seleção</b>.</div></div>
+      <div class="rule-step"><div class="rn">+2</div><div class="rt"><b>Mesmo Estilo</b> ou <b>Mesma Geração</b>.</div></div>
+      <div class="rule-step"><div class="rn">+10</div><div class="rt"><b>Trio Lendário</b>: os 3 jogadores compartilham um clube em comum.</div></div>
+    </div>
+    <div class="highlight-box">
+      <h3>😮‍💨 Fadiga</h3>
+      <div class="rule-step"><div class="rn">!</div><div class="rt">Carta usada fica <b>bloqueada</b> na rodada seguinte — e quanto mais você repete a mesma carta, mais longo o bloqueio (até 3 rodadas). Varie seus trios!</div></div>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="showJogarCategorias()">▶ Bora jogar</button>
+  </div>
+
+  <!-- ===================== COLLECTION (read-only) ===================== -->
+  <div id="screen-collection" class="screen">
+    <div class="topbar" style="margin:-20px -18px 16px; padding:14px 18px;">
+      <button class="btn btn-secondary" style="padding:8px 14px; font-size:13px;" onclick="goHome()">← Voltar</button>
+      <div class="brand-name">COLEÇÃO</div>
+      <div style="width:70px;"></div>
+    </div>
+    <div class="pos-tabs" id="collection-tabs"></div>
+    <div class="card-grid" id="collection-grid"></div>
+  </div>
+
+  <!-- ===================== DECK BUILDER ===================== -->
+  <div id="screen-deckbuilder" class="screen">
+    <div class="topbar" style="margin:-20px -18px 8px; padding:14px 18px;">
+      <button class="btn btn-secondary" style="padding:8px 14px; font-size:13px;" onclick="dbVoltar()">← Voltar</button>
+      <div class="brand-name">MONTAGEM</div>
+      <div style="width:70px;"></div>
+    </div>
+    <div class="eyebrow" id="db-eyebrow">MONTAGEM DE DECK</div>
+    <h2 class="section-title" id="db-title">Deck de Jogador 1</h2>
+    <div class="section-desc" id="db-desc">Escolha 6 defensores, 6 meio-campistas e 6 atacantes (deixe de fora os 2 mais fracos de cada posição).</div>
+    <div class="deck-progress">
+      <div class="chip"><div class="n" id="db-count-DEF">0/6</div><div class="l">DEFESA</div></div>
+      <div class="chip"><div class="n" id="db-count-MEI">0/6</div><div class="l">MEIO</div></div>
+      <div class="chip"><div class="n" id="db-count-ATA">0/6</div><div class="l">ATAQUE</div></div>
+    </div>
+    <div class="pos-tabs" id="db-tabs"></div>
+    <div class="card-grid" id="db-grid"></div>
+    <div class="sticky-footer">
+      <button class="btn btn-primary btn-block" id="db-confirm" disabled onclick="confirmDeck()">Confirmar Deck</button>
+    </div>
+  </div>
+
+  <!-- ===================== COPA DO MUNDO: ESCOLHA DE SELEÇÃO ===================== -->
+  <div id="screen-wc-teamselect" class="screen">
+    <div class="topbar" style="margin:-20px -18px 16px; padding:14px 18px;">
+      <button class="btn btn-secondary" style="padding:8px 14px; font-size:13px;" onclick="showCampeonatoSelect()">← Voltar</button>
+      <div class="brand-name">COPA DO MUNDO</div>
+      <div style="width:70px;"></div>
+    </div>
+    <div class="eyebrow" style="color:var(--gold)">48 SELEÇÕES</div>
+    <h2 class="section-title">Escolha sua seleção</h2>
+    <div class="section-desc">Depois você convoca 24 dos 48 jogadores do elenco pra representar esse time — e escolhe os 12 titulares a cada partida.</div>
+    <div class="wc-team-grid" id="wc-team-grid"></div>
+  </div>
+
+  <!-- ===================== COPA DO MUNDO: HUB DO CAMPEONATO ===================== -->
+  <div id="screen-wc-hub" class="screen">
+    <div class="topbar" style="margin:-20px -18px 16px; padding:14px 18px;">
+      <button class="btn btn-secondary" style="padding:8px 14px; font-size:13px;" onclick="wcSairDoModo()">✕ Sair</button>
+      <div class="brand-name">COPA DO MUNDO</div>
+      <div style="width:70px;"></div>
+    </div>
+    <div id="wc-hub-content"></div>
+  </div>
+
+  <!-- ===================== COVER / TRANSITION ===================== -->
+  <div id="screen-cover" class="screen">
+    <div class="cover-visual" id="cover-visual">
+      <svg class="cover-ring-svg" id="cover-ring-svg" viewBox="0 0 100 100">
+        <circle class="ring-track" cx="50" cy="50" r="45"></circle>
+        <circle class="ring-fill" id="cover-ring-fill" cx="50" cy="50" r="45"></circle>
+      </svg>
+      <div class="cover-icon-wrap" id="cover-icon-wrap">
+        <div class="cover-icon" id="cover-icon">🔒</div>
+      </div>
+      <div class="cover-kickoff" id="cover-kickoff">
+        <div class="cover-kickoff-ground"></div>
+        <div class="cover-kickoff-shadow"></div>
+        <div class="cover-kickoff-ball">⚽</div>
+      </div>
+      <div class="cover-thinking" id="cover-thinking">
+        <div class="cover-thinking-sweep"></div>
+        <div class="cover-thinking-core">🤖</div>
+        <div class="cover-thinking-dot d1"></div>
+        <div class="cover-thinking-dot d2"></div>
+        <div class="cover-thinking-dot d3"></div>
+      </div>
+    </div>
+    <div class="cover-ring-number" id="cover-ring-number"></div>
+    <div class="cover-duel" id="cover-duel"></div>
+    <div class="cover-title" id="cover-title">Passe o dispositivo</div>
+    <div class="cover-sub" id="cover-sub">Entregue o aparelho para o próximo jogador antes de continuar.</div>
+    <button class="btn btn-primary" id="cover-btn" onclick="coverContinue()">Estou pronto</button>
+  </div>
+
+  <!-- ===================== BATTLE: PICK ===================== -->
+  <div id="screen-pick" class="screen">
+    <div class="rodada-header">
+      <div>
+        <div class="rlabel" id="pick-rodada-label">RODADA 1</div>
+        <div class="rturn" id="pick-turn-label">Jogador 1 ataca</div>
+      </div>
+      <div class="placar-mini" id="pick-placar-mini"></div>
+    </div>
+    <div class="section-desc" id="pick-instruction">Escolha secretamente 1 defensor, 1 meio-campista e 1 atacante.</div>
+    <div class="slot-picker" id="pick-slots"></div>
+    <div class="sticky-footer">
+      <button class="btn btn-primary btn-block" id="pick-confirm" disabled onclick="confirmPick()">Confirmar Trio</button>
+    </div>
+  </div>
+
+  <!-- ===================== REVEAL ===================== -->
+  <div id="screen-reveal" class="screen">
+    <div class="rodada-header">
+      <div>
+        <div class="rlabel" id="reveal-rodada-label">RODADA 1</div>
+        <div class="rturn">Revelação</div>
+      </div>
+      <div class="placar-mini" id="reveal-placar-mini"></div>
+    </div>
+
+    <div class="eyebrow" style="color:var(--c-ata)">TRIO ATACANTE — <span id="reveal-atk-name"></span></div>
+    <div class="trio-reveal">
+      <svg class="nexo-svg" id="nexo-svg-atk"></svg>
+      <div class="trio-row" id="reveal-atk-cards"></div>
+    </div>
+
+    <div class="eyebrow" style="color:var(--c-def); margin-top:14px;">TRIO DEFENSOR — <span id="reveal-def-name"></span></div>
+    <div class="trio-reveal">
+      <svg class="nexo-svg" id="nexo-svg-def"></svg>
+      <div class="trio-row" id="reveal-def-cards"></div>
+    </div>
+
+    <div class="score-box">
+      <div class="score-side" id="score-side-atk">
+        <div class="role">ATAQUE</div>
+        <div class="score" id="score-atk">0</div>
+        <div class="score-breakdown" id="score-atk-breakdown"></div>
+      </div>
+      <div class="score-side" id="score-side-def">
+        <div class="role">DEFESA</div>
+        <div class="score" id="score-def">0</div>
+        <div class="score-breakdown" id="score-def-breakdown"></div>
+      </div>
+    </div>
+
+    <div class="result-banner" id="result-banner"></div>
+
+    <div class="goal-overlay" id="goal-overlay">
+      <div class="goal-flash"></div>
+      <div class="goal-confetti" id="goal-confetti"></div>
+      <div class="goal-ball-track">
+        <div class="goal-net">🥅</div>
+        <div class="goal-ball" id="goal-ball">⚽</div>
+      </div>
+      <div class="goal-burst" id="goal-burst"></div>
+      <div class="goal-text" id="goal-text">GOL!</div>
+    </div>
+    <div class="save-overlay" id="save-overlay">
+      <div class="save-net-wrap">
+        <div class="save-net">🥅</div>
+        <div class="save-glove">🧤</div>
+      </div>
+      <div class="save-text" id="save-text">DEFENDEU!</div>
+    </div>
+    <div class="lament-overlay" id="lament-overlay">
+      <div class="lament-icon" id="lament-icon">😔</div>
+      <div class="lament-text" id="lament-text">NÃO FOI DESSA VEZ...</div>
+    </div>
+
+    <div class="sticky-footer">
+      <button class="btn btn-primary btn-block" id="reveal-continue" onclick="continueAfterReveal()">Próxima Rodada</button>
+    </div>
+  </div>
+
+  <!-- ===================== RESULT ===================== -->
+  <div id="screen-result" class="screen">
+    <div class="result-confetti" id="result-confetti"></div>
+    <div class="trophy">🏆</div>
+    <div class="winner-name" id="result-winner"></div>
+    <div class="final-score" id="result-final-score"></div>
+
+    <div class="highlight-box">
+      <h3>⚡ Melhores Combinações</h3>
+      <div id="result-combos"></div>
+    </div>
+
+    <div class="highlight-box">
+      <h3>📊 Resumo da Partida</h3>
+      <div id="result-summary"></div>
+    </div>
+
+    <button class="btn btn-primary btn-block" onclick="replaySameMode()">Jogar Novamente</button>
+    <button class="btn btn-secondary btn-block" style="margin-top:10px;" onclick="goHome()">Menu Principal</button>
+    <div class="footer-note">NEXUS FC · V2</div>
+  </div>
+
+</div>
+
+<script>
+/* =====================================================================
+   NEXUS FC — V1 MVP
+   Modo: pass-and-play local (2 jogadores, mesmo aparelho)
+   ===================================================================== */
+
+/* ---------------------- DADOS DAS CARTAS ---------------------- */
+/* ---------------------- SUPABASE ---------------------- */
+const SUPABASE_URL = 'https://exxqzvkskkafqvmgofuy.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV4eHF6dmtza2thZnF2bWdvZnV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MjU3NDIsImV4cCI6MjA5OTMwMTc0Mn0.gFrN1Zh6jlJA7UWg5YZyQPlQkVu40heMvrs4Ya7Mm88';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let currentSaveId = null; // id do save de Copa em andamento (null = ainda não existe / foi encerrado)
+
+let CARDS = []; // carregado do Supabase em nexusEntrarLogado()
+const CARDS_FALLBACK = [
+  // ---------- DEFENSORES (16) ----------
+  {id:'vandijk', nome:'Van Dijk', posicao:'DEF', ataque:4, defesa:19, controle:11,
+    clube:['Liverpool'], selecao:['Holanda'], estilo:['Líder','Aéreo'], geracao:'Era Messi/Ronaldo', companheiros:['Mohamed Salah','Trent Alexander-Arnold'],
+    habilidade:{nome:'Muralha', tipo:'rival_ataque', valor:4, desc:'Reduz o Ataque rival em 4 ao defender.'}},
+  {id:'sramos', nome:'Sergio Ramos', posicao:'DEF', ataque:7, defesa:18, controle:10,
+    clube:['Real Madrid','Sevilla'], selecao:['Espanha'], estilo:['Líder','Físico'], geracao:'Era Messi/Ronaldo', companheiros:['Luka Modrić','Toni Kroos','Marcelo'],
+    habilidade:{nome:'Gol Decisivo', tipo:'trio_ataque', valor:4, desc:'+4 no Ataque total do trio.'}},
+  {id:'maldini', nome:'Paolo Maldini', posicao:'DEF', ataque:3, defesa:19, controle:12,
+    clube:['Milan'], selecao:['Itália'], estilo:['Líder','Elegante'], geracao:'Anos 80-90', companheiros:['Alessandro Nesta'],
+    habilidade:{nome:'Elegância Defensiva', tipo:'trio_defesa', valor:5, desc:'+5 na Defesa total do trio.'}},
+  {id:'beckenbauer', nome:'Franz Beckenbauer', posicao:'DEF', ataque:8, defesa:16, controle:15,
+    clube:['Bayern de Munique'], selecao:['Alemanha'], estilo:['Líder','Construtor'], geracao:'Anos 60-70', companheiros:[],
+    habilidade:{nome:'Libero', tipo:'trio_controle', valor:5, desc:'+5 no Controle total do trio.'}},
+  {id:'cafu', nome:'Cafu', posicao:'DEF', ataque:9, defesa:14, controle:11,
+    clube:['São Paulo','Milan'], selecao:['Brasil'], estilo:['Velocista','Físico'], geracao:'Era 2000s', companheiros:['Roberto Carlos','Ronaldo Nazário','Rivaldo'],
+    habilidade:{nome:'Capitão Incansável', tipo:'trio_ataque', valor:3, desc:'+3 no Ataque total do trio.'}},
+  {id:'rcarlos', nome:'Roberto Carlos', posicao:'DEF', ataque:11, defesa:13, controle:12,
+    clube:['Real Madrid'], selecao:['Brasil'], estilo:['Ofensivo','Físico'], geracao:'Era 2000s', companheiros:['Cafu','Ronaldo Nazário','Zinedine Zidane'],
+    habilidade:{nome:'Chute de Canhão', tipo:'trio_ataque', valor:5, desc:'+5 no Ataque total do trio.'}},
+  {id:'nesta', nome:'Alessandro Nesta', posicao:'DEF', ataque:3, defesa:18, controle:11,
+    clube:['Milan'], selecao:['Itália'], estilo:['Elegante','Defensivo'], geracao:'Era 2000s', companheiros:['Paolo Maldini','Andrea Pirlo'],
+    habilidade:{nome:'Leitura Perfeita', tipo:'rival_ataque', valor:4, desc:'Reduz o Ataque rival em 4 ao defender.'}},
+  {id:'puyol', nome:'Carles Puyol', posicao:'DEF', ataque:4, defesa:18, controle:9,
+    clube:['Barcelona'], selecao:['Espanha'], estilo:['Líder','Físico'], geracao:'Era 2000s', companheiros:['Xavi','Andrés Iniesta'],
+    habilidade:{nome:'Coração de Capitão', tipo:'rival_ataque', valor:5, desc:'Reduz o Ataque rival em 5 ao defender.'}},
+  {id:'tsilva', nome:'Thiago Silva', posicao:'DEF', ataque:3, defesa:17, controle:13,
+    clube:['Milan','PSG','Chelsea'], selecao:['Brasil'], estilo:['Líder','Elegante'], geracao:'Era Messi/Ronaldo', companheiros:['Neymar'],
+    habilidade:{nome:'Monstro', tipo:'trio_defesa', valor:4, desc:'+4 na Defesa total do trio.'}},
+  {id:'lucio', nome:'Lúcio', posicao:'DEF', ataque:6, defesa:16, controle:10,
+    clube:['Bayern de Munique','Internazionale'], selecao:['Brasil'], estilo:['Físico','Ofensivo'], geracao:'Era 2000s', companheiros:[],
+    habilidade:{nome:'Ataque de Zagueiro', tipo:'trio_ataque', valor:3, desc:'+3 no Ataque total do trio.'}},
+  {id:'rdias', nome:'Rúben Dias', posicao:'DEF', ataque:3, defesa:18, controle:10,
+    clube:['Man City'], selecao:['Portugal'], estilo:['Líder','Defensivo'], geracao:'Nova Geração', companheiros:[],
+    habilidade:{nome:'Leitura de Jogo', tipo:'rival_ataque', valor:3, desc:'Reduz o Ataque rival em 3 ao defender.'}},
+  {id:'hakimi', nome:'Achraf Hakimi', posicao:'DEF', ataque:9, defesa:14, controle:11,
+    clube:['PSG','Inter de Milão'], selecao:['Marrocos'], estilo:['Velocista','Ofensivo'], geracao:'Nova Geração', companheiros:['Neymar','Kylian Mbappé'],
+    habilidade:{nome:'Ala Relâmpago', tipo:'trio_ataque', valor:4, desc:'+4 no Ataque total do trio.'}},
+  {id:'dalves', nome:'Dani Alves', posicao:'DEF', ataque:10, defesa:13, controle:12,
+    clube:['Barcelona','PSG'], selecao:['Brasil'], estilo:['Ofensivo','Criador'], geracao:'Era 2000s', companheiros:['Xavi','Andrés Iniesta','Neymar'],
+    habilidade:{nome:'Assistência de Ala', tipo:'trio_nexo', valor:3, desc:'+3 no bônus de NEXO do trio.'}},
+  {id:'trent', nome:'Trent Alexander-Arnold', posicao:'DEF', ataque:12, defesa:12, controle:16,
+    clube:['Liverpool'], selecao:['Inglaterra'], estilo:['Criador','Ofensivo'], geracao:'Nova Geração', companheiros:['Virgil van Dijk','Mohamed Salah'],
+    habilidade:{nome:'Lançamento de Precisão', tipo:'trio_controle', valor:4, desc:'+4 no Controle total do trio.'}},
+  {id:'marcelo', nome:'Marcelo', posicao:'DEF', ataque:11, defesa:12, controle:13,
+    clube:['Real Madrid'], selecao:['Brasil'], estilo:['Ofensivo','Drible'], geracao:'Era Messi/Ronaldo', companheiros:['Sergio Ramos','Luka Modrić','Toni Kroos'],
+    habilidade:{nome:'Drible na Linha de Fundo', tipo:'trio_ataque', valor:4, desc:'+4 no Ataque total do trio.'}},
+  {id:'zanetti', nome:'Javier Zanetti', posicao:'DEF', ataque:6, defesa:15, controle:13,
+    clube:['Internazionale'], selecao:['Argentina'], estilo:['Líder','Versátil'], geracao:'Anos 80-90', companheiros:[],
+    habilidade:{nome:'Eterno Capitão', tipo:'trio_defesa', valor:3, desc:'+3 na Defesa total do trio.'}},
+
+  // ---------- MEIO-CAMPISTAS (16) ----------
+  {id:'zidane', nome:'Zinedine Zidane', posicao:'MEI', ataque:15, defesa:8, controle:19,
+    clube:['Juventus','Real Madrid'], selecao:['França'], estilo:['Maestro','Elegante'], geracao:'Era 2000s', companheiros:['Roberto Carlos','Thierry Henry'],
+    habilidade:{nome:'Virtuose', tipo:'trio_nexo', valor:6, desc:'+6 no bônus de NEXO do trio.'}},
+  {id:'xavi', nome:'Xavi', posicao:'MEI', ataque:11, defesa:8, controle:19,
+    clube:['Barcelona'], selecao:['Espanha'], estilo:['Maestro','Passador'], geracao:'Era 2000s', companheiros:['Andrés Iniesta','Carles Puyol','Dani Alves'],
+    habilidade:{nome:'Tiki-Taka', tipo:'trio_controle', valor:5, desc:'+5 no Controle total do trio.'}},
+  {id:'iniesta', nome:'Andrés Iniesta', posicao:'MEI', ataque:13, defesa:8, controle:18,
+    clube:['Barcelona'], selecao:['Espanha'], estilo:['Criador','Drible'], geracao:'Era 2000s', companheiros:['Xavi','Carles Puyol'],
+    habilidade:{nome:'Gol da Glória', tipo:'trio_ataque', valor:4, desc:'+4 no Ataque total do trio.'}},
+  {id:'modric', nome:'Luka Modrić', posicao:'MEI', ataque:12, defesa:9, controle:19,
+    clube:['Real Madrid'], selecao:['Croácia'], estilo:['Maestro'], geracao:'Era Messi/Ronaldo', companheiros:['Cristiano Ronaldo','Toni Kroos','Sergio Ramos','Marcelo'],
+    habilidade:{nome:'Maestro', tipo:'trio_nexo', valor:5, desc:'+5 no bônus de NEXO do trio.'}},
+  {id:'kdb', nome:'Kevin De Bruyne', posicao:'MEI', ataque:15, defesa:8, controle:17,
+    clube:['Man City'], selecao:['Bélgica'], estilo:['Criador'], geracao:'Era Messi/Ronaldo', companheiros:['Erling Haaland','Rodri'],
+    habilidade:{nome:'Visão de Jogo', tipo:'trio_nexo', valor:3, desc:'+3 no bônus de NEXO do trio.'}},
+  {id:'kroos', nome:'Toni Kroos', posicao:'MEI', ataque:11, defesa:9, controle:19,
+    clube:['Bayern de Munique','Real Madrid'], selecao:['Alemanha'], estilo:['Maestro'], geracao:'Era Messi/Ronaldo', companheiros:['Luka Modrić','Cristiano Ronaldo','Sergio Ramos','Marcelo'],
+    habilidade:{nome:'Precisão Cirúrgica', tipo:'trio_nexo', valor:4, desc:'+4 no bônus de NEXO do trio.'}},
+  {id:'pirlo', nome:'Andrea Pirlo', posicao:'MEI', ataque:10, defesa:9, controle:19,
+    clube:['Milan','Juventus'], selecao:['Itália'], estilo:['Maestro','Passador'], geracao:'Era 2000s', companheiros:['Paolo Maldini','Alessandro Nesta'],
+    habilidade:{nome:'Regista', tipo:'trio_controle', valor:5, desc:'+5 no Controle total do trio.'}},
+  {id:'kaka', nome:'Kaká', posicao:'MEI', ataque:16, defesa:6, controle:15,
+    clube:['Milan','Real Madrid'], selecao:['Brasil'], estilo:['Criador','Velocista'], geracao:'Era 2000s', companheiros:['Alessandro Nesta','Paolo Maldini'],
+    habilidade:{nome:'Explosão Ofensiva', tipo:'trio_ataque', valor:5, desc:'+5 no Ataque total do trio.'}},
+  {id:'ronaldinho', nome:'Ronaldinho', posicao:'MEI', ataque:16, defesa:5, controle:17,
+    clube:['Barcelona','Milan'], selecao:['Brasil'], estilo:['Drible','Criador'], geracao:'Era 2000s', companheiros:['Xavi'],
+    habilidade:{nome:'Magia no Pé', tipo:'trio_nexo', valor:5, desc:'+5 no bônus de NEXO do trio.'}},
+  {id:'gerrard', nome:'Steven Gerrard', posicao:'MEI', ataque:16, defesa:10, controle:15,
+    clube:['Liverpool'], selecao:['Inglaterra'], estilo:['Box-to-box','Líder'], geracao:'Era 2000s', companheiros:[],
+    habilidade:{nome:'Milagre de Istambul', tipo:'trio_ataque', valor:5, desc:'+5 no Ataque total do trio.'}},
+  {id:'lampard', nome:'Frank Lampard', posicao:'MEI', ataque:16, defesa:9, controle:14,
+    clube:['Chelsea'], selecao:['Inglaterra'], estilo:['Box-to-box','Finalizador'], geracao:'Era 2000s', companheiros:[],
+    habilidade:{nome:'Chegada de Área', tipo:'trio_ataque', valor:5, desc:'+5 no Ataque total do trio.'}},
+  {id:'scholes', nome:'Paul Scholes', posicao:'MEI', ataque:13, defesa:9, controle:18,
+    clube:['Manchester United'], selecao:['Inglaterra'], estilo:['Passador','Maestro'], geracao:'Era 2000s', companheiros:[],
+    habilidade:{nome:'Passe Milimétrico', tipo:'trio_controle', valor:4, desc:'+4 no Controle total do trio.'}},
+  {id:'bellingham', nome:'Jude Bellingham', posicao:'MEI', ataque:14, defesa:10, controle:16,
+    clube:['Real Madrid'], selecao:['Inglaterra'], estilo:['Box-to-box'], geracao:'Nova Geração', companheiros:['Vinícius Júnior'],
+    habilidade:{nome:'Instinto Goleador', tipo:'trio_ataque', valor:4, desc:'+4 no Ataque total do trio.'}},
+  {id:'pedri', nome:'Pedri', posicao:'MEI', ataque:11, defesa:8, controle:18,
+    clube:['Barcelona'], selecao:['Espanha'], estilo:['Criador'], geracao:'Nova Geração', companheiros:[],
+    habilidade:{nome:'Toque Curto', tipo:'trio_controle', valor:4, desc:'+4 no Controle total do trio.'}},
+  {id:'rodri', nome:'Rodri', posicao:'MEI', ataque:10, defesa:12, controle:18,
+    clube:['Man City'], selecao:['Espanha'], estilo:['Controlador'], geracao:'Nova Geração', companheiros:['Kevin De Bruyne','Erling Haaland'],
+    habilidade:{nome:'Controle Total', tipo:'trio_controle', valor:5, desc:'+5 no Controle total do trio.'}},
+  {id:'rice', nome:'Declan Rice', posicao:'MEI', ataque:10, defesa:13, controle:16,
+    clube:['West Ham','Arsenal'], selecao:['Inglaterra'], estilo:['Controlador','Defensivo'], geracao:'Nova Geração', companheiros:['Harry Kane'],
+    habilidade:{nome:'Blindagem', tipo:'trio_defesa', valor:4, desc:'+4 na Defesa total do trio.'}},
+
+  // ---------- ATACANTES (16) ----------
+  {id:'messi', nome:'Messi', posicao:'ATA', ataque:19, defesa:3, controle:15,
+    clube:['Barcelona','PSG','Inter Miami'], selecao:['Argentina'], estilo:['Criador','Finalizador'], geracao:'Era Messi/Ronaldo', companheiros:['Luis Suárez','Neymar'],
+    habilidade:{nome:'Criador Supremo', tipo:'trio_nexo', valor:6, desc:'+6 no bônus de NEXO do trio.'}},
+  {id:'cr7', nome:'Cristiano Ronaldo', posicao:'ATA', ataque:19, defesa:4, controle:10,
+    clube:['Manchester United','Real Madrid','Al Nassr'], selecao:['Portugal'], estilo:['Finalizador'], geracao:'Era Messi/Ronaldo', companheiros:['Luka Modrić','Toni Kroos','Sergio Ramos','Marcelo'],
+    habilidade:{nome:'Instinto Assassino', tipo:'trio_ataque', valor:5, desc:'+5 no Ataque total do trio.'}},
+  {id:'pele', nome:'Pelé', posicao:'ATA', ataque:18, defesa:4, controle:14,
+    clube:['Santos'], selecao:['Brasil'], estilo:['Finalizador','Elegante'], geracao:'Anos 60-70', companheiros:[],
+    habilidade:{nome:'O Rei', tipo:'trio_nexo', valor:6, desc:'+6 no bônus de NEXO do trio.'}},
+  {id:'maradona', nome:'Diego Maradona', posicao:'ATA', ataque:19, defesa:3, controle:16,
+    clube:['Boca Juniors','Napoli'], selecao:['Argentina'], estilo:['Drible','Criador'], geracao:'Anos 80-90', companheiros:[],
+    habilidade:{nome:'Mão de Deus', tipo:'rival_defesa', valor:6, desc:'Ignora 6 pontos da Defesa rival ao atacar.'}},
+  {id:'ronaldon', nome:'Ronaldo Nazário', posicao:'ATA', ataque:19, defesa:3, controle:11,
+    clube:['Cruzeiro','Barcelona','Internazionale','Real Madrid'], selecao:['Brasil'], estilo:['Velocista','Finalizador'], geracao:'Era 2000s', companheiros:['Roberto Carlos','Cafu','Rivaldo'],
+    habilidade:{nome:'Fenômeno', tipo:'rival_defesa', valor:5, desc:'Ignora 5 pontos da Defesa rival ao atacar.'}},
+  {id:'neymar', nome:'Neymar', posicao:'ATA', ataque:17, defesa:5, controle:14,
+    clube:['Barcelona','PSG'], selecao:['Brasil'], estilo:['Criador','Drible'], geracao:'Era Messi/Ronaldo', companheiros:['Lionel Messi','Thiago Silva','Achraf Hakimi'],
+    habilidade:{nome:'Drible Improvável', tipo:'rival_defesa', valor:5, desc:'Ignora 5 pontos da Defesa rival ao atacar.'}},
+  {id:'mbappe', nome:'Mbappé', posicao:'ATA', ataque:18, defesa:4, controle:12,
+    clube:['PSG','Real Madrid'], selecao:['França'], estilo:['Velocista','Finalizador'], geracao:'Nova Geração', companheiros:['Achraf Hakimi'],
+    habilidade:{nome:'Explosão', tipo:'rival_defesa', valor:4, desc:'Ignora 4 pontos da Defesa rival ao atacar.'}},
+  {id:'haaland', nome:'Haaland', posicao:'ATA', ataque:19, defesa:3, controle:8,
+    clube:['Man City'], selecao:['Noruega'], estilo:['Finalizador'], geracao:'Nova Geração', companheiros:['Kevin De Bruyne','Rodri'],
+    habilidade:{nome:'Matador', tipo:'trio_ataque', valor:6, desc:'+6 no Ataque total do trio.'}},
+  {id:'suarez', nome:'Luis Suárez', posicao:'ATA', ataque:18, defesa:4, controle:13,
+    clube:['Ajax','Liverpool','Barcelona'], selecao:['Uruguai'], estilo:['Finalizador','Físico'], geracao:'Era Messi/Ronaldo', companheiros:['Lionel Messi','Neymar'],
+    habilidade:{nome:'Trio Mágico', tipo:'trio_nexo', valor:4, desc:'+4 no bônus de NEXO do trio.'}},
+  {id:'henry', nome:'Thierry Henry', posicao:'ATA', ataque:18, defesa:4, controle:14,
+    clube:['Arsenal','Barcelona'], selecao:['França'], estilo:['Velocista','Finalizador'], geracao:'Era 2000s', companheiros:['Zinedine Zidane'],
+    habilidade:{nome:'Frieza na Finalização', tipo:'trio_ataque', valor:5, desc:'+5 no Ataque total do trio.'}},
+  {id:'romario', nome:'Romário', posicao:'ATA', ataque:18, defesa:3, controle:12,
+    clube:['Vasco da Gama','Barcelona'], selecao:['Brasil'], estilo:['Oportunista','Finalizador'], geracao:'Anos 80-90', companheiros:[],
+    habilidade:{nome:'Faro de Artilheiro', tipo:'trio_ataque', valor:6, desc:'+6 no Ataque total do trio.'}},
+  {id:'rivaldo', nome:'Rivaldo', posicao:'ATA', ataque:17, defesa:5, controle:15,
+    clube:['Barcelona','Milan'], selecao:['Brasil'], estilo:['Criador','Drible'], geracao:'Era 2000s', companheiros:['Ronaldo Nazário','Cafu'],
+    habilidade:{nome:'Bicicleta', tipo:'trio_nexo', valor:4, desc:'+4 no bônus de NEXO do trio.'}},
+  {id:'salah', nome:'Mohamed Salah', posicao:'ATA', ataque:17, defesa:4, controle:13,
+    clube:['Chelsea','Liverpool'], selecao:['Egito'], estilo:['Velocista','Finalizador'], geracao:'Era Messi/Ronaldo', companheiros:['Virgil van Dijk','Trent Alexander-Arnold'],
+    habilidade:{nome:'Corte pra Dentro', tipo:'trio_ataque', valor:4, desc:'+4 no Ataque total do trio.'}},
+  {id:'vinijr', nome:'Vinícius Júnior', posicao:'ATA', ataque:17, defesa:4, controle:12,
+    clube:['Real Madrid'], selecao:['Brasil'], estilo:['Velocista','Drible'], geracao:'Nova Geração', companheiros:['Jude Bellingham'],
+    habilidade:{nome:'Drible Desequilibrante', tipo:'rival_defesa', valor:3, desc:'Ignora 3 pontos da Defesa rival ao atacar.'}},
+  {id:'kane', nome:'Harry Kane', posicao:'ATA', ataque:18, defesa:4, controle:13,
+    clube:['Tottenham','Bayern de Munique'], selecao:['Inglaterra'], estilo:['Finalizador','Passador'], geracao:'Era Messi/Ronaldo', companheiros:['Declan Rice'],
+    habilidade:{nome:'Artilheiro Nato', tipo:'trio_ataque', valor:5, desc:'+5 no Ataque total do trio.'}},
+  {id:'best', nome:'George Best', posicao:'ATA', ataque:17, defesa:4, controle:14,
+    clube:['Manchester United'], selecao:['Irlanda do Norte'], estilo:['Drible','Elegante'], geracao:'Anos 60-70', companheiros:[],
+    habilidade:{nome:'O Quinto Beatle', tipo:'trio_nexo', valor:5, desc:'+5 no bônus de NEXO do trio.'}},
+];
+const byId = id => CARDS.find(c=>c.id===id);
+
+/* ---------------------- BOOT / LOGIN ---------------------- */
+async function nexusBoot(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(session){ await nexusEntrarLogado(); }
+  else { showScreen('screen-auth'); }
+}
+async function nexusLogin(){
+  const email = document.getElementById('auth-email').value.trim();
+  const senha = document.getElementById('auth-senha').value;
+  const msg = document.getElementById('auth-msg');
+  if(!email || !senha){ msg.textContent = 'Preencha e-mail e senha.'; return; }
+  msg.textContent = 'Entrando...';
+  const { error } = await sb.auth.signInWithPassword({ email, password: senha });
+  if(error){ msg.textContent = error.message; return; }
+  msg.textContent = '';
+  await nexusEntrarLogado();
+}
+async function nexusCadastrar(){
+  const email = document.getElementById('auth-email').value.trim();
+  const senha = document.getElementById('auth-senha').value;
+  const msg = document.getElementById('auth-msg');
+  if(!email || senha.length<6){ msg.textContent = 'E-mail e senha (mín. 6 caracteres) são obrigatórios.'; return; }
+  msg.textContent = 'Criando conta...';
+  const { data, error } = await sb.auth.signUp({ email, password: senha });
+  if(error){ msg.textContent = error.message; return; }
+  if(data.session){ msg.textContent = ''; await nexusEntrarLogado(); }
+  else { msg.textContent = 'Conta criada! Confira seu e-mail para confirmar o login.'; }
+}
+async function nexusLogout(){
+  await sb.auth.signOut();
+  location.reload();
+}
+async function nexusEntrarLogado(){
+  showScreen('screen-boot');
+  await nexusCarregarCartas();
+  showScreen('screen-home');
+}
+async function nexusCarregarCartas(){
+  const { data, error } = await sb.from('cards').select('*').order('posicao').order('nome');
+  if(error || !data || !data.length){
+    console.warn('Não foi possível carregar cartas do Supabase, usando fallback local.', error);
+    CARDS = CARDS_FALLBACK;
+    return;
+  }
+  CARDS = data;
+}
+
+/* ---------------------- SAVE / CONTINUAR COPA ---------------------- */
+async function nexusVerificarSaveCopa(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session) return null;
+  const { data, error } = await sb.from('saves').select('*')
+    .eq('competition_id','copa_mundo').eq('status','em_andamento')
+    .order('updated_at', { ascending:false }).limit(1).maybeSingle();
+  if(error || !data) return null;
+  return data;
+}
+async function nexusSalvarCopa(status){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session) return;
+  const body = { user_id: session.user.id, competition_id:'copa_mundo', status, state: state.wc, updated_at: new Date().toISOString() };
+  try{
+    if(currentSaveId){
+      await sb.from('saves').update(body).eq('id', currentSaveId);
+    } else {
+      const { data, error } = await sb.from('saves').insert(body).select().single();
+      if(!error) currentSaveId = data.id;
+    }
+  }catch(e){ console.warn('Falha ao salvar progresso da Copa:', e); }
+}
+async function nexusAutoSaveCopa(){
+  if(!state.wc || !state.wc.ativo) return;
+  const finalizado = state.wc.faseAtual === 'fim';
+  await nexusSalvarCopa(finalizado ? 'finalizado' : 'em_andamento');
+  if(finalizado) currentSaveId = null; // a próxima Copa gera um save novo
+}
+async function nexusContinuarCopa(){
+  const save = await nexusVerificarSaveCopa();
+  if(!save) return;
+  currentSaveId = save.id;
+  state.wc = save.state;
+  state.gameMode = 'wc';
+  renderWcHub();
+  showScreen('screen-wc-hub');
+}
+
+/* Duelos fixos do modo Craque da Bola: 8 pares por posição (cobre o elenco todo) = 24 escolhas no total */
+const CRAQUE_PAIRS = {
+  DEF: [
+    ['vandijk','sramos'], ['maldini','beckenbauer'], ['cafu','rcarlos'], ['nesta','puyol'],
+    ['tsilva','lucio'], ['rdias','hakimi'], ['dalves','trent'], ['marcelo','zanetti']
+  ],
+  MEI: [
+    ['zidane','pirlo'], ['xavi','iniesta'], ['modric','kroos'], ['kdb','rodri'],
+    ['kaka','ronaldinho'], ['gerrard','lampard'], ['scholes','rice'], ['bellingham','pedri']
+  ],
+  ATA: [
+    ['messi','cr7'], ['pele','maradona'], ['ronaldon','romario'], ['neymar','suarez'],
+    ['mbappe','haaland'], ['henry','rivaldo'], ['salah','kane'], ['vinijr','best']
+  ]
+};
+
+/* As 48 seleções da Copa do Mundo (modo campeonato) */
+const SELECOES_MUNDIAL = [
+  {nome:'Brasil', cod:'BRA'}, {nome:'Argentina', cod:'ARG'}, {nome:'França', cod:'FRA'},
+  {nome:'Alemanha', cod:'GER'}, {nome:'Espanha', cod:'ESP'}, {nome:'Inglaterra', cod:'ENG'},
+  {nome:'Portugal', cod:'POR'}, {nome:'Holanda', cod:'NED'}, {nome:'Itália', cod:'ITA'},
+  {nome:'Bélgica', cod:'BEL'}, {nome:'Uruguai', cod:'URU'}, {nome:'Croácia', cod:'CRO'},
+  {nome:'Marrocos', cod:'MAR'}, {nome:'Japão', cod:'JPN'}, {nome:'Coreia do Sul', cod:'KOR'},
+  {nome:'México', cod:'MEX'}, {nome:'Estados Unidos', cod:'USA'}, {nome:'Canadá', cod:'CAN'},
+  {nome:'Senegal', cod:'SEN'}, {nome:'Gana', cod:'GHA'}, {nome:'Nigéria', cod:'NGA'},
+  {nome:'Camarões', cod:'CMR'}, {nome:'Tunísia', cod:'TUN'}, {nome:'Argélia', cod:'ALG'},
+  {nome:'Egito', cod:'EGY'}, {nome:'Colômbia', cod:'COL'}, {nome:'Chile', cod:'CHI'},
+  {nome:'Peru', cod:'PER'}, {nome:'Equador', cod:'ECU'}, {nome:'Paraguai', cod:'PAR'},
+  {nome:'Suíça', cod:'SUI'}, {nome:'Polônia', cod:'POL'}, {nome:'Sérvia', cod:'SRB'},
+  {nome:'Dinamarca', cod:'DEN'}, {nome:'Suécia', cod:'SWE'}, {nome:'Noruega', cod:'NOR'},
+  {nome:'Áustria', cod:'AUT'}, {nome:'Ucrânia', cod:'UKR'}, {nome:'Turquia', cod:'TUR'},
+  {nome:'Escócia', cod:'SCO'}, {nome:'País de Gales', cod:'WAL'}, {nome:'Irã', cod:'IRN'},
+  {nome:'Arábia Saudita', cod:'KSA'}, {nome:'Catar', cod:'QAT'}, {nome:'Austrália', cod:'AUS'},
+  {nome:'Nova Zelândia', cod:'NZL'}, {nome:'Costa Rica', cod:'CRC'}, {nome:'Panamá', cod:'PAN'}
+];
+
+/* ---------------------- ESTADO DO JOGO ---------------------- */
+let state = {
+  screen:'home',
+  vsBot:false,
+  gameMode:'classic', // 'classic' | 'craque' | 'friend' | 'wc'
+  craque:{sequence:[], index:0, picks:[], timerHandle:null, timeLeft:7},
+  buildingFor:'p1',
+  dbTab:'DEF',
+  dbSelection:{DEF:[],MEI:[],ATA:[]},
+  dbPerPos:6, // cartas por posição no deck (6 no Clássico/Dois Jogadores, 4 na Copa do Mundo)
+  dbContext:'classic', // 'classic' | 'wc' — pra onde confirmDeck() deve mandar o fluxo
+  collectionTab:'DEF',
+  players:{
+    p1:{nome:'Jogador 1', deck:[], fatiga:{}, uso:{}},
+    p2:{nome:'Jogador 2', deck:[], fatiga:{}, uso:{}}
+  },
+  placar:{p1:0,p2:0},
+  rodada:1,
+  atacante:'p1',
+  pickTab:null,
+  pickAtacante:{DEF:null,MEI:null,ATA:null},
+  pickDefensor:{DEF:null,MEI:null,ATA:null},
+  currentPicker:null, // 'p1' or 'p2' during picking phase
+  historico:[], // {rodada, atacante, gol, atkTrio, defTrio, nexoAtk, nexoDef}
+  wc:{ ativo:false, minhaSelecao:null, squad:[], grupos:[], meuGrupoIdx:null, faseAtual:null, faseLabel:'', chave:[], finalistas:null, terceiroColocado:null, campeao:null, vice:null, eliminado:false }
+};
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+/* ---------------------- HOME / NAV ---------------------- */
+function goHome(){ showScreen('screen-home'); }
+function showComoJogar(){ showScreen('screen-comojogar'); }
+function showJogarCategorias(){ showScreen('screen-jogar-categorias'); }
+async function showCampeonatoSelect(){
+  showScreen('screen-campeonato-select');
+  const btn = document.getElementById('wc-continuar-btn');
+  const save = await nexusVerificarSaveCopa();
+  btn.style.display = save ? 'block' : 'none';
+}
+function showModeSelect(){ showScreen('screen-modeselect'); }
+function selectMode(mode){
+  state.gameMode = mode;
+  state.vsBot = (mode !== 'friend');
+  resetMatchState();
+  if(mode==='craque'){
+    startCraqueMode();
+  } else {
+    state.buildingFor='p1';
+    state.dbTab='DEF';
+    state.dbSelection={DEF:[],MEI:[],ATA:[]};
+    state.dbPerPos = 6;
+    state.dbContext = 'classic';
+    renderDeckBuilder();
+    showScreen('screen-deckbuilder');
+  }
+}
+function resetMatchState(){
+  state.placar={p1:0,p2:0};
+  state.rodada=1;
+  state.atacante='p1';
+  state.historico=[];
+  state.players.p1.fatiga={};
+  state.players.p2.fatiga={};
+  state.players.p1.uso={};
+  state.players.p2.uso={};
+  state.players.p1.nome = state.vsBot ? 'Você' : 'Jogador 1';
+  state.players.p2.nome = state.vsBot ? 'Computador' : 'Jogador 2';
+}
+
+function showCollection(){
+  state.collectionTab='DEF';
+  renderCollectionTabs();
+  renderCollectionGrid();
+  showScreen('screen-collection');
+}
+function renderCollectionTabs(){
+  const tabs=document.getElementById('collection-tabs');
+  tabs.innerHTML = ['DEF','MEI','ATA'].map(p=>
+    `<div class="pos-tab ${state.collectionTab===p?'active':''}" data-pos="${p}" onclick="setCollectionTab('${p}')">${posLabel(p)}</div>`
+  ).join('');
+}
+function setCollectionTab(p){ state.collectionTab=p; renderCollectionTabs(); renderCollectionGrid(); }
+function renderCollectionGrid(){
+  const grid=document.getElementById('collection-grid');
+  grid.innerHTML = CARDS.filter(c=>c.posicao===state.collectionTab).map((c,i)=>cardHTML(c,false,false,i,true)).join('');
+}
+
+function posLabel(p){ return p==='DEF'?'DEFESA':p==='MEI'?'MEIO':'ATAQUE'; }
+function ovr(c){ return Math.round((c.ataque + c.defesa + c.controle) / 3); }
+function raridade(c){
+  // "prestígio" pondera o atributo principal da posição, pra não penalizar
+  // especialistas (ex: atacante com defesa baixa) na hora de definir a raridade
+  let prestigio;
+  if(c.posicao==='DEF') prestigio = c.defesa + c.controle*0.5;
+  else if(c.posicao==='MEI') prestigio = c.controle + Math.max(c.ataque,c.defesa)*0.5;
+  else prestigio = c.ataque + c.controle*0.5;
+  if(prestigio>=25) return {label:'LENDÁRIO', color:'var(--nexo)'};
+  if(prestigio>=22) return {label:'OURO', color:'var(--gold)'};
+  return {label:'PRATA', color:'#9aa3b0'};
+}
+
+function cardHTML(c, selected, locked, idx, inert){
+  // inert=true: carta só de exibição (Coleção) — sem onclick.
+  // Cartas travadas MANTÊM o onclick (o CSS .locked bloqueia via pointer-events),
+  // assim dá pra destravar/travar em-place sem recriar o grid.
+  const click = inert ? '' : `onclick="toggleDbCard('${c.id}')"`;
+  return `<div class="card ${selected?'selected':''} ${locked?'locked':''}" data-id="${c.id}" style="--i:${idx||0}" ${click}>
+    ${tcardHTML(c)}
+  </div>`;
+}
+function tcardHTML(c, extraClass){
+  const r = raridade(c);
+  return `<div class="tcard pos-${c.posicao} ${extraClass||''}">
+    <div class="tcard-face">
+      <div class="tcard-topline">
+        <div class="tcard-pos-chip">${c.posicao}</div>
+        <div class="tcard-ovr">${ovr(c)}</div>
+      </div>
+      <div class="tcard-rarity" style="color:${r.color}">${r.label}</div>
+      <div class="tcard-emblem"></div>
+      <div class="tcard-name-wrap"><div class="tcard-name">${c.nome}</div></div>
+      <div class="tcard-stats-strip">
+        <div class="s atk"><span class="v">${c.ataque}</span><span class="k">ATQ</span></div>
+        <div class="s def"><span class="v">${c.defesa}</span><span class="k">DEF</span></div>
+        <div class="s ctrl"><span class="v">${c.controle}</span><span class="k">CTR</span></div>
+      </div>
+      <div class="tcard-ability"><b>${c.habilidade.nome}:</b> ${c.habilidade.desc}</div>
+    </div>
+  </div>`;
+}
+
+/* ---------------------- DECK BUILDER ---------------------- */
+function replaySameMode(){ selectMode(state.gameMode); }
+function dbVoltar(){
+  if(state.dbContext==='wc-convocacao'){ wcAbrirDificuldadeConvocacao(); }
+  else if(state.dbContext==='wc-escalacao-padrao'){ renderWcHub(); showScreen('screen-wc-hub'); }
+  else { showModeSelect(); }
+}
+function dbPool(){
+  // na escalação titular, só as 24 cartas convocadas aparecem; no resto, o elenco completo
+  if(state.dbContext==='wc-escalacao-padrao') return state.wc.squad.map(byId);
+  return CARDS;
+}
+function renderDeckBuilder(){
+  const p = state.players[state.buildingFor];
+  const perPos = state.dbPerPos;
+  if(state.dbContext==='wc-convocacao'){
+    document.getElementById('db-title').textContent = 'Convocação da Copa';
+    document.getElementById('db-eyebrow').textContent = 'ESCOLHA 8 DE CADA POSIÇÃO (24 NO TOTAL)';
+    document.getElementById('db-desc').textContent = 'Vale a Copa inteira — depois você monta sua escalação titular com 12 dentro desses 24.';
+  } else if(state.dbContext==='wc-escalacao-padrao'){
+    document.getElementById('db-title').textContent = 'Escalação Titular';
+    document.getElementById('db-eyebrow').textContent = 'ESCOLHA 4 DE CADA POSIÇÃO (12 NO TOTAL)';
+    document.getElementById('db-desc').textContent = 'Vale pra todas as partidas da Copa até você trocar de novo. A fadiga entre as cartas reinicia a cada partida.';
+  } else {
+    document.getElementById('db-title').textContent = (state.vsBot && state.buildingFor==='p1') ? 'Seu Deck' : 'Deck de ' + p.nome;
+    document.getElementById('db-eyebrow').textContent = state.vsBot ? 'MONTAGEM DE DECK' : (state.buildingFor==='p1' ? 'ETAPA 1 DE 2' : 'ETAPA 2 DE 2');
+    document.getElementById('db-desc').textContent = 'Escolha ' + perPos + ' defensores, ' + perPos + ' meio-campistas e ' + perPos + ' atacantes.';
+  }
+  ['DEF','MEI','ATA'].forEach(pos=>{
+    document.getElementById('db-count-'+pos).textContent = state.dbSelection[pos].length + '/' + perPos;
+  });
+  const tabs=document.getElementById('db-tabs');
+  tabs.innerHTML = ['DEF','MEI','ATA'].map(p=>
+    `<div class="pos-tab ${state.dbTab===p?'active':''}" data-pos="${p}" onclick="setDbTab('${p}')">${posLabel(p)} (${state.dbSelection[p].length}/${perPos})</div>`
+  ).join('');
+  const grid=document.getElementById('db-grid');
+  grid.innerHTML = dbPool().filter(c=>c.posicao===state.dbTab).map((c,i)=>{
+    const selected = state.dbSelection[c.posicao].includes(c.id);
+    const full = state.dbSelection[c.posicao].length>=perPos && !selected;
+    return cardHTML(c, selected, full, i);
+  }).join('');
+  const total = state.dbSelection.DEF.length + state.dbSelection.MEI.length + state.dbSelection.ATA.length;
+  document.getElementById('db-confirm').disabled = total !== perPos*3;
+}
+function setDbTab(p){ state.dbTab=p; renderDeckBuilder(); }
+function toggleDbCard(id){
+  const c = byId(id);
+  const arr = state.dbSelection[c.posicao];
+  const idx = arr.indexOf(id);
+  if(idx>=0){ arr.splice(idx,1); playTapSound(); }
+  else{
+    if(arr.length>=state.dbPerPos) return;
+    arr.push(id); playSelectSound(); vibrateDevice(12);
+  }
+  updateDeckBuilderInPlace(c.posicao);
+}
+/* Atualiza SÓ as classes das cartas visíveis e os contadores, sem recriar o grid.
+   Recriar o innerHTML a cada toque fazia todas as cartas repetirem a animação
+   de entrada — a tela inteira "sacudia". A animação agora só toca ao abrir a
+   tela ou trocar de aba (que são renders completos de verdade). */
+function updateDeckBuilderInPlace(pos){
+  const perPos = state.dbPerPos;
+  const sel = state.dbSelection[pos];
+  const cheia = sel.length >= perPos;
+  document.querySelectorAll('#db-grid .card').forEach(el=>{
+    const selected = sel.includes(el.dataset.id);
+    el.classList.toggle('selected', selected);
+    el.classList.toggle('locked', cheia && !selected);
+  });
+  ['DEF','MEI','ATA'].forEach(p=>{
+    document.getElementById('db-count-'+p).textContent = state.dbSelection[p].length + '/' + perPos;
+  });
+  document.querySelectorAll('#db-tabs .pos-tab').forEach(tab=>{
+    const p = tab.dataset.pos;
+    tab.textContent = posLabel(p) + ' (' + state.dbSelection[p].length + '/' + perPos + ')';
+  });
+  const total = state.dbSelection.DEF.length + state.dbSelection.MEI.length + state.dbSelection.ATA.length;
+  document.getElementById('db-confirm').disabled = total !== perPos*3;
+}
+function confirmDeck(){
+  const deck = [...state.dbSelection.DEF, ...state.dbSelection.MEI, ...state.dbSelection.ATA];
+  if(state.dbContext==='wc-convocacao'){
+    state.wc.squad = deck;
+    wcSortearGrupos();
+    wcSimularTodasNaoEnvolvidasDoJogador();
+    wcProcessarAteProximaAcaoDoJogador();
+    renderWcHub();
+    showScreen('screen-wc-hub');
+    return;
+  }
+  if(state.dbContext==='wc-escalacao-padrao'){
+    state.wc.escalacaoPadrao = deck;
+    renderWcHub();
+    showScreen('screen-wc-hub');
+    return;
+  }
+  state.players[state.buildingFor].deck = deck;
+  if(state.buildingFor==='p1'){
+    if(state.vsBot){
+      state.players.p2.deck = autoGenerateBotDeck();
+      showCoverScreen('Partida pronta!', 'Rodada 1: você ataca primeiro contra o Computador.', ()=>{ beginRodada(); }, 'Começar', 'kickoff', 4);
+      return;
+    }
+    state.buildingFor='p2';
+    state.dbTab='DEF';
+    state.dbSelection={DEF:[],MEI:[],ATA:[]};
+    showCoverScreen('Passe o dispositivo', 'Agora é a vez do Jogador 2 montar o deck dele. Não deixe o Jogador 1 ver as escolhas.', ()=>{ renderDeckBuilder(); showScreen('screen-deckbuilder'); }, 'Estou pronto', undefined, 6);
+  } else {
+    showCoverScreen('Partida pronta!', 'Rodada 1: ' + state.players.p1.nome + ' ataca primeiro. Passe o dispositivo para ele.', ()=>{ beginRodada(); }, 'Começar', 'kickoff', 5);
+  }
+}
+
+/* ---------------------- BOT: DECK E ESCOLHAS ---------------------- */
+function shuffle(arr){
+  const a=[...arr];
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+function autoGenerateBotDeck(perPos){
+  perPos = perPos || 6;
+  // pondera pelo atributo principal da posição + ruído: o bot monta um deck
+  // competitivo mas nunca idêntico entre partidas
+  const forca = c => (c.posicao==='DEF' ? c.defesa : c.posicao==='MEI' ? c.controle : c.ataque);
+  const pickN = pos => CARDS.filter(c=>c.posicao===pos)
+    .map(c=>({id:c.id, s: forca(c) + Math.random()*6}))
+    .sort((a,b)=>b.s-a.s).slice(0,perPos).map(x=>x.id);
+  return [...pickN('DEF'), ...pickN('MEI'), ...pickN('ATA')];
+}
+function trioBonusesFromAbilities(cardsArr){
+  const b = {ataque:0, controle:0, defesa:0, nexo:0};
+  cardsArr.forEach(c=>{
+    const h = c.habilidade;
+    if(h.tipo==='trio_ataque') b.ataque += h.valor;
+    if(h.tipo==='trio_controle') b.controle += h.valor;
+    if(h.tipo==='trio_defesa') b.defesa += h.valor;
+    if(h.tipo==='trio_nexo') b.nexo += h.valor;
+  });
+  return b;
+}
+/* Se TODAS as cartas de uma posição estiverem fadigadas, libera como exceção
+   apenas a que vai destravar primeiro — evita travar a partida sem opções. */
+function poolComFallback(playerKey, poolIds){
+  const disponiveis = poolIds.filter(id=>cardAvailable(playerKey,id));
+  if(disponiveis.length>0) return {opcoes:disponiveis, emergencia:null};
+  const ordenadas = [...poolIds].sort((a,b)=>
+    (state.players[playerKey].fatiga[a]||0) - (state.players[playerKey].fatiga[b]||0)
+  );
+  const emergencia = ordenadas[0];
+  return {opcoes:[emergencia], emergencia};
+}
+function chooseBotTrio(playerKey, papel){
+  const p = state.players[playerKey];
+  const availByPos = pos => poolComFallback(playerKey, p.deck.filter(id=>byId(id).posicao===pos)).opcoes;
+  const defOpts = availByPos('DEF'), meiOpts = availByPos('MEI'), ataOpts = availByPos('ATA');
+  let best=null, bestScore=-Infinity;
+  defOpts.forEach(dId=>{
+    meiOpts.forEach(mId=>{
+      ataOpts.forEach(aId=>{
+        const trio = {DEF:dId, MEI:mId, ATA:aId};
+        const cards = [byId(dId), byId(mId), byId(aId)];
+        const nexo = computeTrioNexo(trio);
+        const bonus = trioBonusesFromAbilities(cards);
+        let score = papel==='ataca'
+          ? cards[2].ataque + bonus.ataque + (cards[1].controle+bonus.controle)*0.5 + nexo.total + bonus.nexo
+          : cards[0].defesa + bonus.defesa + (cards[1].controle+bonus.controle)*0.5 + nexo.total + bonus.nexo;
+        score += Math.random()*1.5;
+        if(score>bestScore){ bestScore=score; best=trio; }
+      });
+    });
+  });
+  return best;
+}
+
+/* ---------------------- CRAQUE DA BOLA: DECK POR DUELOS ---------------------- */
+function buildCraqueSequence(){
+  let seq = [];
+  // partida única ou convocação da copa: pares fixos cobrindo o elenco completo (48 cartas)
+  ['DEF','MEI','ATA'].forEach(pos=>{
+    CRAQUE_PAIRS[pos].forEach(pair=>{ seq.push({pos, pair: shuffle(pair)}); });
+  });
+  return shuffle(seq);
+}
+function startCraqueMode(destino){
+  state.craque.destino = destino || 'match';
+  state.craque.sequence = buildCraqueSequence();
+  state.craque.index = 0;
+  state.craque.picks = [];
+  document.getElementById('craque-footer-note').textContent = state.craque.destino!=='match'
+    ? 'Toque em uma carta antes que o tempo acabe. Se o tempo esgotar, o jogo sorteia uma das duas pra fechar a lista.'
+    : 'Toque em uma carta antes que o tempo acabe. Se o tempo esgotar, nenhuma das duas entra no seu deck.';
+  showScreen('screen-craque');
+  renderCraqueDuel();
+}
+function clearCraqueTimer(){
+  if(state.craque.timerHandle){ clearInterval(state.craque.timerHandle); state.craque.timerHandle=null; }
+}
+function craqueVoltar(){
+  clearCraqueTimer();
+  if(state.craque.destino==='wc-convocacao'){ wcAbrirDificuldadeConvocacao(); }
+  else { showModeSelect(); }
+}
+function renderCraqueDuel(){
+  clearCraqueTimer();
+  const total = state.craque.sequence.length;
+  const d = state.craque.sequence[state.craque.index];
+  if(!d){ finishCraqueMode(); return; }
+
+  document.getElementById('craque-progress').textContent = 'Escolha ' + (state.craque.index+1) + ' de ' + total;
+  document.getElementById('craque-pos-label').textContent = 'Posição: ' + (d.pos==='DEF'?'Defensor':d.pos==='MEI'?'Meio-campista':'Atacante');
+
+  const [cardA, cardB] = d.pair.map(byId);
+  document.getElementById('craque-duel').innerHTML = [cardA, cardB].map(c => `
+    <div class="duel-card" onclick="pickCraqueCard('${c.id}')">
+      ${tcardHTML(c)}
+    </div>
+  `).join('');
+
+  state.craque.timeLeft = 7;
+  const timerEl = document.getElementById('craque-timer');
+  timerEl.textContent = state.craque.timeLeft;
+  timerEl.classList.remove('urgent');
+  state.craque.timerHandle = setInterval(()=>{
+    state.craque.timeLeft -= 1;
+    if(state.craque.timeLeft <= 0){
+      clearCraqueTimer();
+      vibrateDevice(160);
+      playUrgentTickSound();
+      craqueTimeout();
+      return;
+    }
+    timerEl.textContent = state.craque.timeLeft;
+    timerEl.classList.remove('tickpop'); void timerEl.offsetWidth; timerEl.classList.add('tickpop');
+    if(state.craque.timeLeft <= 2){
+      timerEl.classList.add('urgent');
+      playUrgentTickSound();
+      vibrateDevice(35);
+    } else if(state.craque.timeLeft <= 4){
+      playTickSound();
+    }
+  }, 1000);
+}
+function pickCraqueCard(id){
+  clearCraqueTimer();
+  playSelectSound();
+  vibrateDevice(20);
+  state.craque.picks.push(id);
+  state.craque.index += 1;
+  renderCraqueDuel();
+}
+function craqueTimeout(){
+  if(state.craque.destino!=='match'){
+    // na Copa (convocação ou escalação) a lista precisa fechar num número exato: sem escolha, sorteia uma das duas
+    const d = state.craque.sequence[state.craque.index];
+    const escolhida = shuffle([...d.pair])[0];
+    state.craque.picks.push(escolhida);
+  }
+  // no modo partida única, ninguém foi escolhido: nenhuma das duas cartas entra no deck
+  state.craque.index += 1;
+  renderCraqueDuel();
+}
+function finishCraqueMode(){
+  let deck = [...state.craque.picks];
+  // garante ao menos 1 carta por posição pra partida não travar
+  ['DEF','MEI','ATA'].forEach(pos=>{
+    if(!deck.some(id=>byId(id).posicao===pos)){
+      deck.push(shuffle(CARDS.filter(c=>c.posicao===pos).map(c=>c.id))[0]);
+    }
+  });
+  if(state.craque.destino==='wc-convocacao'){
+    state.wc.squad = deck;
+    wcSortearGrupos();
+    wcSimularTodasNaoEnvolvidasDoJogador();
+    wcProcessarAteProximaAcaoDoJogador();
+    renderWcHub();
+    showScreen('screen-wc-hub');
+    return;
+  }
+  state.players.p1.deck = deck;
+  state.players.p2.deck = autoGenerateBotDeck();
+  const totalDuelos = state.craque.sequence.length;
+  const faltas = totalDuelos - state.craque.picks.length;
+  const sub = faltas>0
+    ? `Você entrou com ${deck.length} cartas no deck (perdeu ${faltas} escolha${faltas>1?'s':''} por tempo). Rodada 1: você ataca primeiro.`
+    : `Deck completo com ${deck.length} cartas! Rodada 1: você ataca primeiro.`;
+  showCoverScreen('Partida pronta!', sub, ()=>{ beginRodada(); }, 'Começar', 'kickoff', 4);
+}
+
+/* ---------------------- COVER SCREEN ---------------------- */
+function setDuelPreviewCards(atkTrio, defTrio){
+  const rows = ['DEF','MEI','ATA']; // ordem das linhas de cima pra baixo, igual nos dois times
+  let html = '<div class="pitch-line-center"></div><div class="pitch-circle"></div>';
+  rows.forEach((pos, i)=>{
+    const leftCard = byId(atkTrio[pos]);
+    const rightCard = byId(defTrio[pos]);
+    html += `<div class="duel-slot team-left glow-${leftCard.posicao}" data-row="${i}"><div class="duel-slot-inner">${tcardHTML(leftCard, 'compact mini')}</div></div>`;
+    html += `<div class="duel-slot team-right glow-${rightCard.posicao}" data-row="${i}"><div class="duel-slot-inner">${tcardHTML(rightCard, 'compact mini')}</div></div>`;
+  });
+  html += '<div class="duel-flash" id="duel-flash-el"></div><div class="duel-vs" id="duel-vs-el">3</div>';
+  document.getElementById('cover-duel').innerHTML = html;
+}
+/* Monta o campo, conta regressiva, choca as cartas e revela o resultado sozinho — sem precisar tocar em nada */
+function playRevealSequence(){
+  setDuelPreviewCards(state.pickAtacante, state.pickDefensor);
+  document.getElementById('cover-btn').style.display = 'none';
+  showCoverScreen('Confronto da rodada', 'Os dois times estão se preparando...', null, '', 'duel');
+
+  const vsEl = document.getElementById('duel-vs-el');
+  const subEl = document.getElementById('cover-sub');
+  let count = 3;
+  const tick = ()=>{
+    vsEl.classList.remove('tick'); void vsEl.offsetWidth; vsEl.classList.add('tick');
+    if(count>0){
+      vsEl.textContent = count;
+      subEl.textContent = 'Confronto em ' + count + '...';
+      playTickSound();
+      count -= 1;
+      setTimeout(tick, 850);
+    } else {
+      vsEl.textContent = 'VS';
+      subEl.textContent = 'Choque!';
+      playClashSound();
+      vibrateDevice([50,30,80]);
+      document.getElementById('duel-flash-el').classList.add('burst');
+      document.querySelectorAll('#cover-duel .team-left .duel-slot-inner').forEach(el=>{ el.style.transform = 'translateX(24px)'; });
+      document.querySelectorAll('#cover-duel .team-right .duel-slot-inner').forEach(el=>{ el.style.transform = 'translateX(-24px)'; });
+      setTimeout(()=>{
+        document.getElementById('cover-btn').style.display = '';
+        resolveRodada();
+      }, 1400);
+    }
+  };
+  setTimeout(tick, 850);
+}
+function startCountdownRing(seconds, showRing){
+  const svg = document.getElementById('cover-ring-svg');
+  const fill = document.getElementById('cover-ring-fill');
+  const numEl = document.getElementById('cover-ring-number');
+  const circumference = 282.74;
+  svg.classList.toggle('show', !!showRing);
+  fill.style.transition = 'none';
+  fill.style.strokeDashoffset = '0';
+  void fill.offsetWidth;
+  fill.style.transition = `stroke-dashoffset ${seconds}s linear`;
+  requestAnimationFrame(()=>{ fill.style.strokeDashoffset = String(circumference); });
+  let n = seconds;
+  numEl.textContent = n + 's';
+  return setInterval(()=>{
+    n -= 1;
+    numEl.textContent = Math.max(n, 0) + 's';
+  }, 1000);
+}
+function showCoverScreen(title, sub, onContinue, btnLabel, variant, autoSeconds){
+  document.getElementById('cover-title').textContent = title;
+  document.getElementById('cover-sub').textContent = sub;
+  document.getElementById('cover-btn').textContent = btnLabel || 'Estou pronto';
+  const visualEl = document.getElementById('cover-visual');
+  const iconWrapEl = document.getElementById('cover-icon-wrap');
+  const duelEl = document.getElementById('cover-duel');
+  const kickoffEl = document.getElementById('cover-kickoff');
+  const thinkingEl = document.getElementById('cover-thinking');
+  const numEl = document.getElementById('cover-ring-number');
+  iconWrapEl.style.display = 'none';
+  duelEl.classList.remove('active');
+  kickoffEl.classList.remove('active');
+  thinkingEl.classList.remove('active');
+  visualEl.style.display = 'flex';
+  numEl.style.display = 'block';
+  if(variant==='duel'){
+    duelEl.classList.add('active');
+    visualEl.style.display = 'none';
+    numEl.style.display = 'none';
+    // os slots já foram recriados do zero por setDuelPreviewCards, então a animação sempre toca certinho
+  } else if(variant==='kickoff'){
+    kickoffEl.classList.add('active');
+  } else if(variant==='thinking'){
+    thinkingEl.classList.add('active');
+  } else {
+    iconWrapEl.style.display = 'flex';
+  }
+  state._coverCallback = onContinue;
+  if(state._coverAutoTimer){ clearInterval(state._coverAutoTimer); state._coverAutoTimer = null; }
+  if(state._coverAutoTimeout){ clearTimeout(state._coverAutoTimeout); state._coverAutoTimeout = null; }
+  if(autoSeconds && variant !== 'duel'){
+    document.getElementById('cover-btn').textContent = (btnLabel || 'Continuar') + ' (pular espera)';
+    state._coverAutoTimer = startCountdownRing(autoSeconds, variant !== 'kickoff' && variant !== 'thinking');
+    state._coverAutoTimeout = setTimeout(()=>{ coverContinue(); }, autoSeconds*1000);
+  } else {
+    document.getElementById('cover-ring-svg').classList.remove('show');
+    numEl.textContent = '';
+  }
+  showScreen('screen-cover');
+}
+function coverContinue(){
+  if(state._coverAutoTimer){ clearInterval(state._coverAutoTimer); state._coverAutoTimer = null; }
+  if(state._coverAutoTimeout){ clearTimeout(state._coverAutoTimeout); state._coverAutoTimeout = null; }
+  const cb = state._coverCallback;
+  state._coverCallback = null;
+  if(cb) cb();
+}
+
+/* =====================================================================
+   COPA DO MUNDO — modo campeonato
+   Reaproveita 100% o motor de partida (trio, NEXOS, habilidades, gols, fadiga).
+   Diferença: as partidas que não são suas são simuladas automaticamente
+   (não dá pra jogar 100+ partidas na mão).
+   ===================================================================== */
+async function wcAbrirSelecaoDeTime(){
+  const existente = await nexusVerificarSaveCopa();
+  if(existente){
+    if(!confirm('Você já tem uma Copa em andamento. Começar uma nova vai abandonar o progresso salvo. Continuar mesmo assim?')) return;
+    await sb.from('saves').update({status:'abandonada'}).eq('id', existente.id);
+    currentSaveId = null;
+  }
+  const grid = document.getElementById('wc-team-grid');
+  grid.innerHTML = SELECOES_MUNDIAL.map(s=>
+    `<div class="wc-team-card" onclick='wcEscolherTime(${JSON.stringify(s.nome)})'>
+      <div class="wc-team-badge">${s.cod}</div>
+      <div class="wc-team-name">${s.nome}</div>
+    </div>`
+  ).join('');
+  showScreen('screen-wc-teamselect');
+}
+function wcEscolherTime(nome){
+  const selecao = SELECOES_MUNDIAL.find(s=>s.nome===nome);
+  state._wcAguardandoAvanco = false;
+  state.wc = {ativo:true, minhaSelecao:selecao, squad:[], escalacaoPadrao:null, grupos:[], meuGrupoIdx:null, faseAtual:'grupos', faseLabel:'Fase de Grupos', chave:[], finalistas:null, terceiroColocado:null, campeao:null, vice:null, eliminado:false};
+  wcAbrirDificuldadeConvocacao();
+}
+function wcAbrirDificuldadeConvocacao(){
+  document.getElementById('wc-dificuldade-eyebrow').textContent = 'CONVOCAÇÃO DA COPA';
+  document.getElementById('wc-dificuldade-titulo').textContent = 'Escolha 24 de 48';
+  document.getElementById('wc-dificuldade-desc').textContent = 'Essa convocação vale a Copa inteira. Antes de cada partida você escolhe os 12 titulares dentro desses 24.';
+  showScreen('screen-wc-dificuldade');
+}
+function wcVoltarDificuldade(){ wcAbrirSelecaoDeTime(); }
+function wcEscolherDificuldade(dificuldade){
+  // essa tela só existe pra CONVOCAÇÃO (24 de 48); a escalação titular é sempre normal
+  if(dificuldade==='craque'){
+    startCraqueMode('wc-convocacao');
+    return;
+  }
+  state.dbContext = 'wc-convocacao';
+  state.dbPerPos = 8;
+  state.dbTab = 'DEF';
+  state.dbSelection = {DEF:[], MEI:[], ATA:[]};
+  renderDeckBuilder();
+  showScreen('screen-deckbuilder');
+}
+
+function wcSortearGrupos(){
+  const times = SELECOES_MUNDIAL.map(s=>({
+    nome:s.nome, cod:s.cod, forca: 68+Math.floor(Math.random()*25),
+    pts:0, v:0, e:0, d:0, gp:0, gc:0, souEu:false
+  }));
+  const meuIdx = times.findIndex(t=>t.nome===state.wc.minhaSelecao.nome);
+  const meuTime = times.splice(meuIdx,1)[0];
+  meuTime.souEu = true;
+  const resto = shuffle(times);
+  const grupos = [];
+  const grupoJogador = [meuTime, ...resto.splice(0,3)];
+  grupos.push({nome:'Grupo A', times:grupoJogador});
+  for(let i=1;i<12;i++){
+    grupos.push({nome:'Grupo '+String.fromCharCode(65+i), times:resto.splice(0,4)});
+  }
+  // calendário de rodadas de um grupo de 4 (round-robin): cada rodada tem 2 jogos simultâneos
+  const RODADAS = [ [[0,1],[2,3]], [[0,2],[1,3]], [[0,3],[1,2]] ];
+  grupos.forEach(g=>{
+    g.partidas = [];
+    RODADAS.forEach((pares, idx)=>{
+      pares.forEach(([i,j])=>{
+        g.partidas.push({casa:i, fora:j, jogada:false, envolveJogador: g.times[i].souEu || g.times[j].souEu, rodada: idx+1});
+      });
+    });
+  });
+  state.wc.grupos = grupos;
+  state.wc.meuGrupoIdx = 0;
+}
+function wcSimularPartida(timeA, timeB){
+  const fator = (timeA.forca - timeB.forca) / 20;
+  const golsA = Math.max(0, Math.round(1 + Math.random()*2.2 + fator*0.6 + (Math.random()-0.5)));
+  const golsB = Math.max(0, Math.round(1 + Math.random()*2.2 - fator*0.6 + (Math.random()-0.5)));
+  return {golsA, golsB};
+}
+function wcAplicarResultadoGrupo(grupo, partida, golsA, golsB){
+  const timeA = grupo.times[partida.casa], timeB = grupo.times[partida.fora];
+  timeA.gp+=golsA; timeA.gc+=golsB;
+  timeB.gp+=golsB; timeB.gc+=golsA;
+  if(golsA>golsB){ timeA.pts+=3; timeA.v++; timeB.d++; }
+  else if(golsB>golsA){ timeB.pts+=3; timeB.v++; timeA.d++; }
+  else { timeA.pts+=1; timeB.pts+=1; timeA.e++; timeB.e++; }
+  partida.jogada = true; partida.placarCasa = golsA; partida.placarFora = golsB;
+}
+function wcSimularTodasNaoEnvolvidasDoJogador(){
+  // só os OUTROS 11 grupos são resolvidos de uma vez (o jogador nunca vê a progressão deles);
+  // o grupo do próprio jogador é resolvido rodada a rodada, junto com as partidas dele
+  state.wc.grupos.forEach((g, idx)=>{
+    if(idx === state.wc.meuGrupoIdx) return;
+    g.partidas.forEach(p=>{
+      if(!p.jogada){
+        const r = wcSimularPartida(g.times[p.casa], g.times[p.fora]);
+        wcAplicarResultadoGrupo(g, p, r.golsA, r.golsB);
+      }
+    });
+  });
+}
+function wcSimularParceiroDaRodada(grupo, rodadaNum){
+  // resolve o outro jogo da MESMA rodada do grupo do jogador (que não envolve ele),
+  // só depois que a partida do jogador daquela rodada termina
+  const partida = grupo.partidas.find(p=>p.rodada===rodadaNum && !p.envolveJogador && !p.jogada);
+  if(partida){
+    const r = wcSimularPartida(grupo.times[partida.casa], grupo.times[partida.fora]);
+    wcAplicarResultadoGrupo(grupo, partida, r.golsA, r.golsB);
+  }
+}
+function wcProximaPartidaDoGrupo(){
+  const g = state.wc.grupos[state.wc.meuGrupoIdx];
+  return g.partidas.find(p=>!p.jogada && p.envolveJogador) || null;
+}
+function wcOrdenarGrupo(times){
+  return [...times].sort((a,b)=> b.pts-a.pts || (b.gp-b.gc)-(a.gp-a.gc) || b.gp-a.gp);
+}
+function wcClassificarEIniciarMataMata(){
+  state.wc.grupos.forEach(g=>{ g.times = wcOrdenarGrupo(g.times); });
+  const primeiros = state.wc.grupos.map(g=>g.times[0]);
+  const segundos = state.wc.grupos.map(g=>g.times[1]);
+  let terceiros = state.wc.grupos.map(g=>g.times[2]);
+  terceiros = terceiros.sort((a,b)=> b.pts-a.pts || (b.gp-b.gc)-(a.gp-a.gc) || b.gp-a.gp).slice(0,8);
+  const classificados = [...primeiros, ...segundos, ...terceiros];
+  wcMontarConfrontos(classificados, 'Dezesseis-avos de Final', 'r32');
+}
+function wcMontarConfrontos(lista, label, codigo){
+  const embaralhada = shuffle(lista);
+  const confrontos = [];
+  for(let i=0;i<embaralhada.length;i+=2){
+    confrontos.push({timeA:embaralhada[i], timeB:embaralhada[i+1], jogada:false, envolveJogador:(embaralhada[i].souEu||embaralhada[i+1].souEu)});
+  }
+  // IMPORTANTE: os outros confrontos NÃO são simulados aqui — os resultados
+  // só saem DEPOIS que o jogador joga a partida dele (wcSimularRestanteDaFase)
+  state.wc.chave = confrontos;
+  state.wc.faseAtual = codigo;
+  state.wc.faseLabel = label;
+}
+function wcSimularRestanteDaFase(){
+  state.wc.chave.forEach(c=>{
+    if(!c.jogada){
+      const r = wcSimularPartida(c.timeA, c.timeB);
+      c.placarA=r.golsA; c.placarB=r.golsB; c.jogada=true;
+      if(r.golsA===r.golsB){ c.penaltis=true; c.vencedor = Math.random()<0.5?c.timeA:c.timeB; }
+      else c.vencedor = r.golsA>r.golsB ? c.timeA : c.timeB;
+    }
+  });
+}
+function wcAvancarFaseMataMata(){
+  const vencedores = state.wc.chave.map(c=>c.vencedor);
+  if(state.wc.faseAtual==='r32') wcMontarConfrontos(vencedores, 'Oitavas de Final', 'r16');
+  else if(state.wc.faseAtual==='r16') wcMontarConfrontos(vencedores, 'Quartas de Final', 'qf');
+  else if(state.wc.faseAtual==='qf') wcMontarConfrontos(vencedores, 'Semifinal', 'sf');
+  else if(state.wc.faseAtual==='sf'){
+    const perdedores = state.wc.chave.map(c=> c.timeA===c.vencedor ? c.timeB : c.timeA);
+    state.wc.finalistas = vencedores;
+    wcMontarConfrontos(perdedores, 'Disputa de 3º Lugar', 'terceiro');
+  } else if(state.wc.faseAtual==='terceiro'){
+    state.wc.terceiroColocado = state.wc.chave[0].vencedor;
+    wcMontarConfrontos(state.wc.finalistas, 'Final', 'final');
+  } else if(state.wc.faseAtual==='final'){
+    state.wc.campeao = state.wc.chave[0].vencedor;
+    state.wc.vice = state.wc.chave[0].timeA===state.wc.campeao ? state.wc.chave[0].timeB : state.wc.chave[0].timeA;
+    state.wc.faseAtual = 'fim';
+  }
+}
+function wcConfrontoPendenteDoJogador(){
+  if(state.wc.faseAtual==='grupos') return wcProximaPartidaDoGrupo();
+  if(state.wc.faseAtual==='fim') return null;
+  return state.wc.chave.find(c=>!c.jogada && c.envolveJogador) || null;
+}
+function wcTentarAvancarFase(){
+  if(state.wc.faseAtual==='grupos'){
+    if(state.wc.grupos.every(g=>g.partidas.every(p=>p.jogada))){
+      wcClassificarEIniciarMataMata();
+      return true;
+    }
+    return false;
+  }
+  if(state.wc.faseAtual==='fim') return false;
+  if(state._wcAguardandoAvanco) return false; // jogador ainda vai ver os resultados e tocar em "Avançar"
+  // chegou aqui = jogador não tem partida pendente nesta fase (eliminado ou fase sem ele):
+  // agora sim os outros confrontos podem ser resolvidos
+  wcSimularRestanteDaFase();
+  if(state.wc.chave.every(c=>c.jogada)){
+    wcAvancarFaseMataMata();
+    return true;
+  }
+  return false;
+}
+function wcProcessarAteProximaAcaoDoJogador(){
+  let seguranca = 0;
+  while(seguranca < 20){
+    seguranca++;
+    if(state.wc.faseAtual==='fim') break;
+    if(wcConfrontoPendenteDoJogador()) break;
+    if(!wcTentarAvancarFase()) break;
+  }
+}
+function wcJogarProximaPartida(){
+  const pendente = wcConfrontoPendenteDoJogador();
+  if(!pendente){ renderWcHub(); return; }
+  if(!state.wc.escalacaoPadrao){
+    wcAbrirMontarEscalacaoPadrao();
+    return;
+  }
+  let oponente, contexto;
+  if(state.wc.faseAtual==='grupos'){
+    const g = state.wc.grupos[state.wc.meuGrupoIdx];
+    oponente = g.times[pendente.casa].souEu ? g.times[pendente.fora] : g.times[pendente.casa];
+    contexto = {tipo:'grupo', grupo:g, partida:pendente};
+  } else {
+    oponente = pendente.timeA.souEu ? pendente.timeB : pendente.timeA;
+    contexto = {tipo:'mata-mata', confronto:pendente};
+  }
+  state._wcContext = contexto;
+  state._wcOponente = oponente;
+  wcContinuarParaPartida(state.wc.escalacaoPadrao);
+}
+function wcAbrirMontarEscalacaoPadrao(){
+  // escalação titular é sempre no modo normal (escolha livre) — o Craque da Bola
+  // fica só na convocação; aqui vai direto pro montador de 12
+  state.dbContext = 'wc-escalacao-padrao';
+  state.dbPerPos = 4;
+  state.dbTab = 'DEF';
+  state.dbSelection = {DEF:[], MEI:[], ATA:[]};
+  // ao TROCAR uma escalação existente, entra com ela já selecionada —
+  // o jogador só mexe no que quiser em vez de remontar os 12 do zero
+  if(state.wc.escalacaoPadrao){
+    state.wc.escalacaoPadrao.forEach(id=>{
+      state.dbSelection[byId(id).posicao].push(id);
+    });
+  }
+  renderDeckBuilder();
+  showScreen('screen-deckbuilder');
+}
+function wcContinuarParaPartida(deckEscalado){
+  state.gameMode = 'wc';
+  state.vsBot = true;
+  resetMatchState();
+  state.players.p1.nome = state.wc.minhaSelecao.nome;
+  state.players.p2.nome = state._wcOponente.nome;
+  state.players.p1.deck = deckEscalado;
+  state.players.p2.deck = autoGenerateBotDeck(4); // mesmo tamanho da sua escalação (4 por posição), pra Copa ser justa
+  const faseTxt = state.wc.faseAtual==='grupos' ? state.wc.grupos[state.wc.meuGrupoIdx].nome : state.wc.faseLabel;
+  showCoverScreen('Partida pronta!', faseTxt + ': ' + state.players.p1.nome + ' x ' + state.players.p2.nome + '.', ()=>{ beginRodada(); }, 'Começar', 'kickoff', 4);
+}
+function wcFinishMatch(){
+  const golsJogador = state.placar.p1, golsOponente = state.placar.p2;
+  const ctx = state._wcContext;
+  if(ctx.tipo==='grupo'){
+    const casaEhJogador = ctx.grupo.times[ctx.partida.casa].souEu;
+    const golsCasa = casaEhJogador ? golsJogador : golsOponente;
+    const golsFora = casaEhJogador ? golsOponente : golsJogador;
+    wcAplicarResultadoGrupo(ctx.grupo, ctx.partida, golsCasa, golsFora);
+    wcSimularParceiroDaRodada(ctx.grupo, ctx.partida.rodada);
+  } else {
+    const c = ctx.confronto;
+    const aEhJogador = c.timeA.souEu;
+    const golsA = aEhJogador ? golsJogador : golsOponente;
+    const golsB = aEhJogador ? golsOponente : golsJogador;
+    c.jogada = true; c.placarA = golsA; c.placarB = golsB;
+    c.vencedor = golsA>golsB ? c.timeA : c.timeB; // partida do jogador nunca empata (motor sempre define vencedor)
+    // SÓ AGORA os outros confrontos da fase são resolvidos — o jogador vê o
+    // chaveamento completo e avança quando quiser, em vez de já saber tudo antes
+    wcSimularRestanteDaFase();
+    state._wcAguardandoAvanco = true;
+    renderWcHub();
+    showScreen('screen-wc-hub');
+    nexusAutoSaveCopa();
+    return;
+  }
+  wcProcessarAteProximaAcaoDoJogador();
+  renderWcHub();
+  showScreen('screen-wc-hub');
+  nexusAutoSaveCopa();
+}
+function wcAvancarManual(){
+  state._wcAguardandoAvanco = false;
+  wcAvancarFaseMataMata();
+  wcProcessarAteProximaAcaoDoJogador();
+  renderWcHub();
+  showScreen('screen-wc-hub');
+  nexusAutoSaveCopa();
+}
+function wcSairDoModo(){
+  state.wc.ativo = false;
+  goHome();
+}
+function wcEscalacaoStatusHTML(){
+  if(state.wc.escalacaoPadrao){
+    return `<div class="wc-next-box" style="border-color:var(--line); background:var(--surface); text-align:left; padding:10px 14px; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between;">
+      <div><div class="lbl" style="color:var(--nexo); margin-bottom:2px;">✓ ESCALAÇÃO TITULAR PRONTA</div><div style="font-size:12px; color:var(--text-dim);">${state.wc.escalacaoPadrao.length} titulares definidos</div></div>
+      <button class="btn btn-secondary" style="padding:8px 12px; font-size:12px;" onclick="wcAbrirMontarEscalacaoPadrao()">Trocar</button>
+    </div>`;
+  }
+  return `<div class="wc-next-box" style="border-color:var(--danger); text-align:left; padding:10px 14px; margin-bottom:10px;">
+    <div class="lbl" style="color:var(--danger); margin-bottom:6px;">⚠️ ESCALAÇÃO TITULAR PENDENTE</div>
+    <button class="btn btn-gold btn-block" onclick="wcAbrirMontarEscalacaoPadrao()">Montar Escalação Titular</button>
+  </div>`;
+}
+function renderWcHub(){
+  const el = document.getElementById('wc-hub-content');
+  if(!state.wc.ativo){ el.innerHTML=''; return; }
+
+  if(state.wc.faseAtual==='fim'){
+    const souCampeao = state.wc.campeao && state.wc.campeao.souEu;
+    const souVice = state.wc.vice && state.wc.vice.souEu;
+    const souTerceiro = state.wc.terceiroColocado && state.wc.terceiroColocado.souEu;
+    let statusJogador = 'Eliminado antes da final.';
+    if(souCampeao) statusJogador = '🏆 VOCÊ É CAMPEÃO DO MUNDO!';
+    else if(souVice) statusJogador = 'Você ficou em 2º lugar — vice-campeão.';
+    else if(souTerceiro) statusJogador = 'Você conquistou o 3º lugar.';
+    el.innerHTML = `
+      <div class="trophy">🏆</div>
+      <div class="winner-name" style="text-align:center;">${state.wc.campeao.nome}</div>
+      <div class="final-score">Campeão da Copa do Mundo</div>
+      <div class="highlight-box" style="text-align:center;">
+        <h3 style="color:var(--gold)">${statusJogador}</h3>
+        <div class="highlight-row"><span>Campeão</span><span class="hv">${state.wc.campeao.nome}</span></div>
+        <div class="highlight-row"><span>Vice-campeão</span><span class="hv">${state.wc.vice.nome}</span></div>
+        <div class="highlight-row"><span>3º lugar</span><span class="hv">${state.wc.terceiroColocado.nome}</span></div>
+      </div>
+      <button class="btn btn-primary btn-block" onclick="wcSairDoModo()">Voltar ao Menu</button>
+    `;
+    return;
+  }
+
+  if(state.wc.faseAtual==='grupos'){
+    const g = state.wc.grupos[state.wc.meuGrupoIdx];
+    const ordenado = wcOrdenarGrupo(g.times);
+    const pendente = wcProximaPartidaDoGrupo();
+    const rows = ordenado.map(t=>{
+      const j = t.v+t.e+t.d;
+      return `<tr class="${t.souEu?'me':''}"><td>${t.cod}</td><td>${j}</td><td>${t.v}</td><td>${t.e}</td><td>${t.d}</td><td>${t.gp-t.gc>=0?'+':''}${t.gp-t.gc}</td><td class="pts">${t.pts}</td></tr>`;
+    }).join('');
+    let proximoHTML = '';
+    if(pendente){
+      const opon = g.times[pendente.casa].souEu ? g.times[pendente.fora] : g.times[pendente.casa];
+      proximoHTML = `<div class="wc-next-box"><div class="lbl">PRÓXIMO CONFRONTO — ${g.nome}</div><div class="matchup">${state.wc.minhaSelecao.nome} × ${opon.nome}</div></div>
+        <button class="btn btn-primary btn-block" onclick="wcJogarProximaPartida()">Jogar Próxima Partida</button>`;
+    } else {
+      proximoHTML = `<div class="wc-next-box"><div class="lbl">FASE DE GRUPOS</div><div class="matchup">Suas partidas terminaram</div></div>`;
+    }
+    el.innerHTML = `
+      <div class="eyebrow" style="color:var(--gold)">FASE DE GRUPOS</div>
+      <h2 class="wc-phase-title">${g.nome}</h2>
+      <div class="wc-group-name">RODADA ${Math.min(g.partidas.filter(p=>p.envolveJogador && p.jogada).length + 1, 3)} DE 3</div>
+      ${wcEscalacaoStatusHTML()}
+      <table class="wc-table">
+        <tr><th>Seleção</th><th>J</th><th>V</th><th>E</th><th>D</th><th>SG</th><th>PTS</th></tr>
+        ${rows}
+      </table>
+      ${proximoHTML}
+    `;
+    return;
+  }
+
+  // fases de mata-mata
+  const pendente = wcConfrontoPendenteDoJogador();
+  const cards = state.wc.chave.map((c,i)=>{
+    const done = c.jogada;
+    const winA = done && c.vencedor===c.timeA;
+    const winB = done && c.vencedor===c.timeB;
+    const tag = c.envolveJogador ? '<div class="wc-ko-tag">SUA PARTIDA</div>' : '';
+    const pen = (done && c.penaltis) ? '<div class="wc-ko-pen">decidido nos pênaltis</div>' : '';
+    return `<div class="wc-ko-card ${c.envolveJogador?'me':''}" style="--i:${i}">
+      ${tag}
+      <div class="wc-ko-team ${winA?'win':''}"><span class="cod">${c.timeA.cod}</span><span class="nm">${c.timeA.nome}</span><span class="sc">${done?c.placarA:'–'}</span></div>
+      <div class="wc-ko-team ${winB?'win':''}"><span class="cod">${c.timeB.cod}</span><span class="nm">${c.timeB.nome}</span><span class="sc">${done?c.placarB:'–'}</span></div>
+      ${pen}
+    </div>`;
+  }).join('');
+  const grid = `<div class="wc-ko-grid ${state.wc.chave.length<=2?'cols-1':''}">${cards}</div>`;
+  let acaoHTML = '';
+  if(pendente){
+    const opon = pendente.timeA.souEu ? pendente.timeB : pendente.timeA;
+    acaoHTML = `<div class="wc-next-box"><div class="lbl">${state.wc.faseLabel.toUpperCase()}</div><div class="matchup">${state.wc.minhaSelecao.nome} × ${opon.nome}</div></div>
+      <button class="btn btn-primary btn-block" onclick="wcJogarProximaPartida()">Jogar Próxima Partida</button>`;
+  } else if(state._wcAguardandoAvanco){
+    const label = state.wc.faseAtual==='final' ? '🏆 Ver Premiação' : 'Avançar de Fase ➜';
+    acaoHTML = `<button class="btn btn-gold btn-block" onclick="wcAvancarManual()">${label}</button>`;
+  } else {
+    acaoHTML = `<div class="footer-note">Aguardando os outros confrontos desta fase...</div>`;
+  }
+  el.innerHTML = `
+    <div class="eyebrow" style="color:var(--gold)">MATA-MATA</div>
+    <h2 class="wc-phase-title">${state.wc.faseLabel}</h2>
+    <div class="wc-group-name">${state.wc.chave.length} CONFRONTO${state.wc.chave.length>1?'S':''}</div>
+    ${wcEscalacaoStatusHTML()}
+    ${acaoHTML}
+    ${grid}
+  `;
+}
+
+/* ---------------------- FLUXO DE RODADA ---------------------- */
+function defensorDe(atacante){ return atacante==='p1'?'p2':'p1'; }
+
+function beginRodada(){
+  state.pickAtacante={DEF:null,MEI:null,ATA:null};
+  state.pickDefensor={DEF:null,MEI:null,ATA:null};
+  startPickPhase(state.atacante, 'ataca', state.pickAtacante);
+}
+function cardAvailable(playerKey, cardId){
+  const f = state.players[playerKey].fatiga[cardId];
+  return !(f && f >= state.rodada);
+}
+function fatigueRoundsLeft(playerKey, cardId){
+  const f = state.players[playerKey].fatiga[cardId];
+  if(!f || f < state.rodada) return 0;
+  return f - state.rodada + 1;
+}
+function startPickPhase(playerKey, papel, target){
+  state.currentPicker = playerKey;
+  state._pickTarget = target;
+  state._pickPapel = papel;
+  const isBot = state.vsBot && playerKey==='p2';
+  if(isBot){
+    const trio = chooseBotTrio(playerKey, papel);
+    target.DEF = trio.DEF; target.MEI = trio.MEI; target.ATA = trio.ATA;
+    // o Computador decide na hora, sem tela de espera própria — segue direto
+    // pro que vem depois (sua vez de jogar, ou a revelação)
+    proceedAfterPick();
+    return;
+  }
+  renderPickScreen();
+  showScreen('screen-pick');
+}
+function renderPickScreen(){
+  const playerKey = state.currentPicker;
+  const p = state.players[playerKey];
+  const target = state._pickTarget;
+  document.getElementById('pick-rodada-label').textContent = 'RODADA ' + state.rodada;
+  document.getElementById('pick-turn-label').textContent = p.nome + ' ' + state._pickPapel;
+  document.getElementById('pick-instruction').textContent = state._pickPapel==='ataca'
+    ? 'Escolha secretamente 1 defensor, 1 meio-campista e 1 atacante para o ataque.'
+    : 'Escolha secretamente 1 defensor, 1 meio-campista e 1 atacante para a defesa.';
+  const matchPoint = Math.max(state.placar.p1, state.placar.p2) === 2 ? ' <span class="match-point">🔥 MATCH POINT</span>' : '';
+  document.getElementById('pick-placar-mini').innerHTML =
+    `<span>${state.players.p1.nome.split(' ')[0]} <b>${state.placar.p1}</b></span> · <span>${state.players.p2.nome.split(' ')[0]} <b>${state.placar.p2}</b></span>` + matchPoint;
+
+  const slotsEl = document.getElementById('pick-slots');
+  slotsEl.innerHTML = ['DEF','MEI','ATA'].map(pos=>{
+    const options = p.deck.filter(id=>byId(id).posicao===pos);
+    const {emergencia} = poolComFallback(playerKey, options);
+    const optHTML = options.map(id=>{
+      const c = byId(id);
+      const selected = target[pos]===id;
+      const isEmergencia = id===emergencia;
+      const available = cardAvailable(playerKey, id) || isEmergencia;
+      const restante = available ? 0 : fatigueRoundsLeft(playerKey, id);
+      let stamp = '';
+      if(isEmergencia) stamp = '<div class="emergency-stamp">⚡ LIBERADA</div>';
+      else if(!available) stamp = `<div class="fatigue-stamp">BLOQ ${restante}x</div>`;
+      return `<div class="pick-tcard-wrap ${selected?'selected':''} ${!available?'fatigued':''}" data-id="${id}" onclick="${available?`pickSlot('${pos}','${id}')`:''}">
+        ${tcardHTML(c, 'compact mini')}
+        ${stamp}
+      </div>`;
+    }).join('');
+    return `<div class="slot-group" data-pos="${pos}">
+      <div class="slot-group-label"><span class="mono">${posLabel(pos)}</span><span class="mono slot-status" style="color:var(--nexo)">${target[pos]?'✓ selecionado':'pendente'}</span></div>
+      <div class="slot-options">${optHTML}</div>
+    </div>`;
+  }).join('');
+
+  const done = target.DEF && target.MEI && target.ATA;
+  document.getElementById('pick-confirm').disabled = !done;
+}
+function pickSlot(pos, id){
+  state._pickTarget[pos] = id;
+  playSelectSound();
+  vibrateDevice(12);
+  // marca a seleção em-place: recriar a lista resetava o scroll horizontal das cartas
+  const group = document.querySelector(`#pick-slots .slot-group[data-pos="${pos}"]`);
+  if(group){
+    group.querySelectorAll('.pick-tcard-wrap').forEach(el=>{
+      el.classList.toggle('selected', el.dataset.id === id);
+    });
+    const status = group.querySelector('.slot-status');
+    if(status) status.textContent = '✓ selecionado';
+  }
+  const t = state._pickTarget;
+  document.getElementById('pick-confirm').disabled = !(t.DEF && t.MEI && t.ATA);
+}
+function confirmPick(){ proceedAfterPick(); }
+
+function proceedAfterPick(){
+  if(state._pickPapel==='ataca'){
+    const defKey = defensorDe(state.atacante);
+    const defIsBot = state.vsBot && defKey==='p2';
+    if(defIsBot){
+      startPickPhase(defKey, 'defende', state.pickDefensor);
+    } else if(state.vsBot){
+      showCoverScreen('Sua vez de defender', 'O Computador já escolheu o ataque em segredo. Prepare sua defesa.', ()=>{
+        startPickPhase(defKey, 'defende', state.pickDefensor);
+      }, 'Estou pronto', 'kickoff', 3);
+    } else {
+      showCoverScreen('Passe o dispositivo', 'Agora é a vez de ' + state.players[defKey].nome + ' escolher o time de defesa. Não deixe o atacante ver.', ()=>{
+        startPickPhase(defKey, 'defende', state.pickDefensor);
+      }, 'Estou pronto', undefined, 6);
+    }
+  } else {
+    playRevealSequence();
+  }
+}
+
+/* ---------------------- CÁLCULO DE NEXOS ---------------------- */
+function computeNexoPairwise(cardA, cardB){
+  const conexoes = [];
+  const shareClube = cardA.clube.some(c=>cardB.clube.includes(c));
+  if(shareClube) conexoes.push({tipo:'Mesmo Clube', valor:5});
+  const shareSelecao = cardA.selecao.some(s=>cardB.selecao.includes(s));
+  if(shareSelecao) conexoes.push({tipo:'Mesma Seleção', valor:3});
+  const shareEstilo = cardA.estilo.some(e=>cardB.estilo.includes(e));
+  if(shareEstilo) conexoes.push({tipo:'Mesmo Estilo', valor:2});
+  const mesmaGeracao = cardA.geracao === cardB.geracao;
+  if(mesmaGeracao) conexoes.push({tipo:'Mesma Geração', valor:2});
+  const companheiros = cardA.companheiros.includes(cardB.nome) || cardB.companheiros.includes(cardA.nome);
+  if(companheiros) conexoes.push({tipo:'Companheiros', valor:5});
+  return conexoes;
+}
+function computeTrioNexo(trio){
+  // trio = {DEF:id, MEI:id, ATA:id}
+  const cards = [byId(trio.DEF), byId(trio.MEI), byId(trio.ATA)];
+  const pares = [[0,1],[0,2],[1,2]];
+  let total = 0;
+  const detalhes = [];
+  pares.forEach(([i,j])=>{
+    const cons = computeNexoPairwise(cards[i], cards[j]);
+    cons.forEach(c=>{
+      total += c.valor;
+      detalhes.push({par:cards[i].nome+' + '+cards[j].nome, ...c});
+    });
+  });
+  // trio lendário: os 3 compartilham ao menos um clube em comum
+  const clubesComuns = cards[0].clube.filter(cl=>cards[1].clube.includes(cl) && cards[2].clube.includes(cl));
+  let trioLendario = false;
+  if(clubesComuns.length>0){
+    total += 10;
+    trioLendario = true;
+    detalhes.push({par:'Trio Completo', tipo:'Trio Lendário ('+clubesComuns[0]+')', valor:10});
+  }
+  return {total, detalhes, trioLendario, cards};
+}
+
+/* ---------------------- RESOLUÇÃO DA RODADA ---------------------- */
+function resolveRodada(){
+  const atkKey = state.atacante;
+  const defKey = defensorDe(atkKey);
+  const atkTrio = state.pickAtacante;
+  const defTrio = state.pickDefensor;
+
+  const nexoAtk = computeTrioNexo(atkTrio);
+  const nexoDef = computeTrioNexo(defTrio);
+
+  const atkCards = {def:byId(atkTrio.DEF), mei:byId(atkTrio.MEI), ata:byId(atkTrio.ATA)};
+  const defCards = {def:byId(defTrio.DEF), mei:byId(defTrio.MEI), ata:byId(defTrio.ATA)};
+
+  // aplica habilidades
+  let bonusAtaqueAtk=0, bonusControleAtk=0, bonusDefesaAtk=0, bonusNexoAtk=0;
+  let bonusAtaqueDef=0, bonusControleDef=0, bonusDefesaDef=0, bonusNexoDef=0;
+  let reducaoAtaqueRival=0; // aplicada pelo defensor no ataque
+  let reducaoDefesaRival=0; // aplicada pelo atacante na defesa
+
+  [atkCards.def, atkCards.mei, atkCards.ata].forEach(c=>{
+    const h=c.habilidade;
+    if(h.tipo==='trio_ataque') bonusAtaqueAtk += h.valor;
+    if(h.tipo==='trio_controle') bonusControleAtk += h.valor;
+    if(h.tipo==='trio_defesa') bonusDefesaAtk += h.valor;
+    if(h.tipo==='trio_nexo') bonusNexoAtk += h.valor;
+    if(h.tipo==='rival_defesa') reducaoDefesaRival += h.valor;
+  });
+  [defCards.def, defCards.mei, defCards.ata].forEach(c=>{
+    const h=c.habilidade;
+    if(h.tipo==='trio_ataque') bonusAtaqueDef += h.valor;
+    if(h.tipo==='trio_controle') bonusControleDef += h.valor;
+    if(h.tipo==='trio_defesa') bonusDefesaDef += h.valor;
+    if(h.tipo==='trio_nexo') bonusNexoDef += h.valor;
+    if(h.tipo==='rival_ataque') reducaoAtaqueRival += h.valor;
+  });
+
+  const baseAtaque = atkCards.ata.ataque + bonusAtaqueAtk;
+  const controleAtaque = (atkCards.mei.controle + bonusControleAtk) * 0.5;
+  const nexoAtaqueTotal = nexoAtk.total + bonusNexoAtk;
+  const attackScore = Math.max(0, baseAtaque + controleAtaque + nexoAtaqueTotal - reducaoAtaqueRival);
+
+  const baseDefesa = Math.max(0, defCards.def.defesa + bonusDefesaDef - reducaoDefesaRival);
+  const controleDefesa = (defCards.mei.controle + bonusControleDef) * 0.5;
+  const nexoDefesaTotal = nexoDef.total + bonusNexoDef;
+  const defenseScore = baseDefesa + controleDefesa + nexoDefesaTotal;
+
+  const gol = attackScore > defenseScore;
+  if(gol) state.placar[atkKey] += 1;
+
+  // fadiga: cartas usadas ficam bloqueadas na próxima rodada
+  // fadiga escalona por carta: cada vez que a MESMA carta é usada na partida,
+  // o próximo bloqueio fica mais longo (1ª vez: 1 rodada, 2ª vez: 2 rodadas, 3ª vez: 3...).
+  // Isso impede o "ping-pong" entre 2 combos fixos: mesmo trocando 1 carta do trio,
+  // as outras 2 cartas compartilhadas ficam cada vez mais caras de repetir.
+  // Vale pra qualquer modo, inclusive Copa do Mundo (reinicia a cada partida).
+  function aplicarFadigaEscalada(playerKey, id){
+    const p = state.players[playerKey];
+    // se a carta ainda estava bloqueada nesta rodada, ela só entrou em campo via
+    // liberação de emergência — nesse caso a escalada REINICIA (bloqueio 1), senão
+    // a fadiga entraria em espiral e travaria o jogador sem opções de verdade
+    const eraEmergencia = (p.fatiga[id] || 0) >= state.rodada;
+    const usoAtual = eraEmergencia ? 1 : (p.uso[id] || 0) + 1;
+    p.uso[id] = usoAtual;
+    const bloqueio = Math.min(usoAtual, 3); // cap em 3 rodadas pra não travar a carta pro resto da partida
+    p.fatiga[id] = state.rodada + bloqueio;
+  }
+  [atkTrio.DEF, atkTrio.MEI, atkTrio.ATA].forEach(id=>aplicarFadigaEscalada(atkKey, id));
+  [defTrio.DEF, defTrio.MEI, defTrio.ATA].forEach(id=>aplicarFadigaEscalada(defKey, id));
+
+  state.historico.push({
+    rodada: state.rodada, atacante: atkKey, gol,
+    atkTrioNomes: [atkCards.def.nome, atkCards.mei.nome, atkCards.ata.nome],
+    defTrioNomes: [defCards.def.nome, defCards.mei.nome, defCards.ata.nome],
+    nexoAtk: nexoAtaqueTotal, nexoDef: nexoDefesaTotal,
+    attackScore: Math.round(attackScore*10)/10, defenseScore: Math.round(defenseScore*10)/10
+  });
+
+  playRevealCinematic({
+    atkKey, defKey, atkCards, defCards, nexoAtk, nexoDef,
+    attackScore, defenseScore, gol,
+    breakdownAtk: {base:baseAtaque, controle:Math.round(controleAtaque*10)/10, nexo:nexoAtaqueTotal, reducao:reducaoAtaqueRival},
+    breakdownDef: {base:Math.round(baseDefesa*10)/10, controle:Math.round(controleDefesa*10)/10, nexo:nexoDefesaTotal}
+  });
+}
+
+/* ---------------------- SOM E VIBRAÇÃO ---------------------- */
+function vibrateDevice(pattern){
+  if(navigator.vibrate){ try{ navigator.vibrate(pattern); }catch(e){} }
+}
+function getAudioCtx(){
+  if(!window._nexusAudioCtx){
+    try{ window._nexusAudioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; }
+  }
+  if(window._nexusAudioCtx.state==='suspended'){ window._nexusAudioCtx.resume().catch(()=>{}); }
+  return window._nexusAudioCtx;
+}
+/* Destrava o áudio no primeiro toque real do usuário em qualquer lugar do app.
+   Os sons de gol/lamento disparam segundos depois (após vários setTimeout/await),
+   fora da janela de "gesto do usuário" que os navegadores exigem — por isso
+   precisamos destravar o contexto AQUI, de forma síncrona, dentro do próprio toque. */
+function unlockAudioOnUserGesture(){
+  const ctx = getAudioCtx();
+  if(ctx){
+    if(ctx.state==='suspended'){ ctx.resume().catch(()=>{}); }
+    // blip silencioso só pra forçar o desbloqueio completo do dispositivo
+    try{
+      const buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      src.connect(ctx.destination);
+      src.start(0);
+    }catch(e){}
+  }
+}
+['click','touchstart','pointerdown'].forEach(evt=>{
+  document.addEventListener(evt, unlockAudioOnUserGesture, {once:true, passive:true});
+});
+/* Tons curtos de interface: toque, seleção, tique do timer e choque do confronto */
+function playTone(freq, dur, type, vol, delay){
+  const ctx = getAudioCtx(); if(!ctx) return;
+  try{
+    const t0 = ctx.currentTime + (delay||0);
+    const osc = ctx.createOscillator(); osc.type = type||'triangle';
+    osc.frequency.setValueAtTime(freq, t0);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(vol||0.08, t0);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0+dur);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(t0); osc.stop(t0+dur+0.02);
+  }catch(e){}
+}
+function playTapSound(){ playTone(660, 0.05, 'triangle', 0.06); }
+function playSelectSound(){ playTone(880, 0.07, 'triangle', 0.09); playTone(1175, 0.06, 'triangle', 0.05, 0.05); }
+function playTickSound(){ playTone(540, 0.05, 'square', 0.06); }
+function playUrgentTickSound(){ playTone(1020, 0.06, 'square', 0.09); }
+function playClashSound(){
+  playTone(170, 0.2, 'sawtooth', 0.12);
+  playTone(95, 0.28, 'sawtooth', 0.1, 0.02);
+  playTone(1400, 0.09, 'square', 0.05, 0.01);
+}
+function playCheerSound(){
+  const ctx = getAudioCtx(); if(!ctx) return;
+  try{
+    const dur = 1.7;
+    const bands = [550, 950, 1450, 2100]; // várias faixas = sensação de multidão, não uma voz só
+    bands.forEach((freq, idx)=>{
+      const bufferSize = Math.floor(ctx.sampleRate * dur);
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for(let i=0;i<bufferSize;i++){ data[i] = Math.random()*2-1; }
+      const noise = ctx.createBufferSource(); noise.buffer = buffer;
+      const filter = ctx.createBiquadFilter(); filter.type='bandpass';
+      filter.frequency.value = freq + (Math.random()*60-30);
+      filter.Q.value = 1.1;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.17, ctx.currentTime+0.12); // ataque rápido (explosão de empolgação)
+      gain.gain.linearRampToValueAtTime(0.13, ctx.currentTime+0.6); // sustém (o "rugido")
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+dur); // decai devagar
+      noise.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
+      noise.start(ctx.currentTime + idx*0.015);
+      noise.stop(ctx.currentTime + dur + 0.05);
+    });
+  }catch(e){}
+}
+function playSaveSound(){
+  const ctx = getAudioCtx(); if(!ctx) return;
+  try{
+    const osc = ctx.createOscillator(); osc.type='sine';
+    osc.frequency.setValueAtTime(190, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(55, ctx.currentTime+0.28);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.4, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+0.32);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime+0.32);
+  }catch(e){}
+}
+function playLamentSound(){
+  const ctx = getAudioCtx(); if(!ctx) return;
+  try{
+    const osc = ctx.createOscillator(); osc.type='sawtooth';
+    osc.frequency.setValueAtTime(210, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(75, ctx.currentTime+0.5);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.16, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+0.55);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime+0.55);
+  }catch(e){}
+}
+/* Torcida decepcionada ("uhhh") — toca sempre que NÃO é gol, seja defesa boa ou chance perdida */
+function playCrowdUhSound(){
+  const ctx = getAudioCtx(); if(!ctx) return;
+  try{
+    const dur = 0.9;
+    const voices = 3;
+    for(let v=0; v<voices; v++){
+      const bufferSize = Math.floor(ctx.sampleRate * dur);
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for(let i=0;i<bufferSize;i++){
+        const t = i/bufferSize;
+        const envelope = Math.sin(Math.PI * Math.pow(t, 0.75)); // sobe rápido e desce, tipo gemido coletivo
+        data[i] = (Math.random()*2-1) * envelope;
+      }
+      const noise = ctx.createBufferSource(); noise.buffer = buffer;
+      const filter = ctx.createBiquadFilter(); filter.type='bandpass';
+      const baseFreq = 480 + v*130 + (Math.random()*30-15);
+      filter.frequency.setValueAtTime(baseFreq, ctx.currentTime);
+      filter.frequency.exponentialRampToValueAtTime(baseFreq*0.42, ctx.currentTime+dur);
+      filter.Q.value = 2.5 + v*0.8;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.001, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.22, ctx.currentTime+0.18);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+dur);
+      noise.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
+      noise.start(ctx.currentTime + v*0.03);
+      noise.stop(ctx.currentTime + dur + 0.05);
+    }
+  }catch(e){}
+}
+
+/* ---------------------- PARTÍCULAS E CONFETE ---------------------- */
+function spawnParticles(container, count, colors){
+  container.innerHTML='';
+  const frag = document.createDocumentFragment();
+  for(let i=0;i<count;i++){
+    const angle = Math.random()*Math.PI*2;
+    const dist = 55 + Math.random()*75;
+    const p = document.createElement('div');
+    p.className='particle';
+    p.style.setProperty('--dx', (Math.cos(angle)*dist)+'px');
+    p.style.setProperty('--dy', (Math.sin(angle)*dist)+'px');
+    p.style.background = colors[Math.floor(Math.random()*colors.length)];
+    p.style.animationDelay = (Math.random()*0.15)+'s';
+    frag.appendChild(p);
+  }
+  container.appendChild(frag);
+}
+function spawnConfetti(container, count){
+  container.innerHTML='';
+  const colors = ['#17E3C4','#D8B76A','#FF5468','#4C8DFF','#A78BFA'];
+  const frag = document.createDocumentFragment();
+  for(let i=0;i<count;i++){
+    const p = document.createElement('div');
+    p.className='confetti-piece';
+    p.style.left = Math.random()*100+'%';
+    p.style.background = colors[Math.floor(Math.random()*colors.length)];
+    p.style.animationDuration = (1.3+Math.random()*0.9)+'s';
+    p.style.animationDelay = (Math.random()*0.3)+'s';
+    p.style.transform = `rotate(${Math.random()*360}deg)`;
+    frag.appendChild(p);
+  }
+  container.appendChild(frag);
+}
+function restartAnim(el){ if(!el) return; el.style.animation='none'; void el.offsetWidth; el.style.animation=''; }
+
+function triggerGoalCelebration(texto){
+  vibrateDevice([80,40,80,40,170]);
+  playCheerSound();
+  const overlay = document.getElementById('goal-overlay');
+  overlay.classList.remove('show');
+  document.getElementById('goal-text').textContent = texto;
+  spawnParticles(document.getElementById('goal-burst'), 26, ['#17E3C4','#D8B76A','#FF5468']);
+  spawnConfetti(document.getElementById('goal-confetti'), 28);
+  void overlay.offsetWidth;
+  overlay.classList.add('show');
+  setTimeout(()=>{ overlay.classList.remove('show'); }, 2300);
+}
+function triggerSaveCelebration(texto){
+  vibrateDevice(70);
+  playSaveSound();
+  playCrowdUhSound();
+  const overlay = document.getElementById('save-overlay');
+  overlay.classList.remove('show');
+  document.getElementById('save-text').textContent = texto;
+  void overlay.offsetWidth;
+  overlay.classList.add('show');
+  setTimeout(()=>{ overlay.classList.remove('show'); }, 1900);
+}
+function triggerLamentCelebration(texto, icone, tipo){
+  vibrateDevice(120);
+  if(tipo==='concede'){ playCheerSound(); } else { playCrowdUhSound(); }
+  const overlay = document.getElementById('lament-overlay');
+  overlay.classList.remove('show');
+  document.getElementById('lament-text').textContent = texto;
+  document.getElementById('lament-icon').textContent = icone || '😔';
+  void overlay.offsetWidth;
+  overlay.classList.add('show');
+  setTimeout(()=>{ overlay.classList.remove('show'); }, 1800);
+}
+
+/* ---------------------- HELPERS DE ANIMAÇÃO ---------------------- */
+function wait(ms){ return new Promise(resolve=>setTimeout(resolve, ms)); }
+function animateNumber(el, from, to, duration){
+  const start = performance.now();
+  function tick(now){
+    const t = Math.min((now-start)/duration, 1);
+    const eased = 1 - Math.pow(1-t, 3);
+    el.textContent = (from + (to-from)*eased).toFixed(1);
+    if(t<1) requestAnimationFrame(tick);
+    else el.textContent = to.toFixed(1);
+  }
+  requestAnimationFrame(tick);
+}
+function animateBreakdown(el, lines, startDelay){
+  el.innerHTML = '';
+  lines.forEach((line, k)=>{
+    setTimeout(()=>{
+      const div = document.createElement('div');
+      div.className = 'bd-line';
+      div.textContent = line;
+      el.appendChild(div);
+      requestAnimationFrame(()=>div.classList.add('show'));
+    }, startDelay + k*220);
+  });
+}
+
+/* ---------------------- RENDER REVEAL + GRAFO DE NEXOS ---------------------- */
+function flipCardHTML(card, idSuffix){
+  return `<div class="flip-card" id="flip-${idSuffix}">
+    <div class="flip-card-inner">
+      <div class="flip-card-face flip-card-back"><div class="cardback-mark">N</div></div>
+      <div class="flip-card-face flip-card-front">${tcardHTML(card, 'compact')}</div>
+    </div>
+  </div>`;
+}
+function drawNexoGraph(svgId, nexoData, startDelay){
+  const svg = document.getElementById(svgId);
+  const positions = [16.6, 50, 83.3]; // % — DEF, MEI, ATA columns
+  const y = 50; // % vertical center of the row
+  const pares = [[0,1],[0,2],[1,2]];
+  const conns = [];
+  pares.forEach(([i,j])=>{
+    const cardI = nexoData.cards[i], cardJ = nexoData.cards[j];
+    const cons = computeNexoPairwise(cardI, cardJ);
+    if(cons.length>0){
+      conns.push({i, j, total: cons.reduce((s,c)=>s+c.valor,0)});
+    }
+  });
+  svg.innerHTML = conns.map((c,k)=>{
+    const x1=positions[c.i], x2=positions[c.j]; const midX=(x1+x2)/2;
+    return `<g class="nexo-conn" data-idx="${k}"><line x1="${x1}%" y1="${y}%" x2="${x2}%" y2="${y}%"></line><text x="${midX}%" y="${y-4}%" text-anchor="middle">+${c.total}</text></g>`;
+  }).join('');
+  svg.querySelectorAll('.nexo-conn').forEach((g,k)=>{
+    setTimeout(()=>{ g.classList.add('show'); }, (startDelay||0) + k*180);
+  });
+  return conns.length;
+}
+let _revealToken = 0; // invalida cinemáticas antigas se o jogador avançar antes do fim
+async function playRevealCinematic(d){
+  const token = ++_revealToken;
+  const fimDePartida = state.placar.p1>=3 || state.placar.p2>=3;
+  const btnContinue = document.getElementById('reveal-continue');
+  btnContinue.disabled = true; // evita avançar no meio da animação e corromper a próxima tela
+  btnContinue.textContent = fimDePartida ? '🏆 Ver Resultado' : 'Próxima Rodada';
+  document.getElementById('reveal-placar-mini').innerHTML = '';
+  document.getElementById('reveal-rodada-label').textContent = 'RODADA ' + state.rodada;
+  document.getElementById('reveal-atk-name').textContent = state.players[d.atkKey].nome;
+  document.getElementById('reveal-def-name').textContent = state.players[d.defKey].nome;
+
+  // reset visual do round anterior
+  document.getElementById('goal-overlay').classList.remove('show');
+  document.getElementById('save-overlay').classList.remove('show');
+  const banner = document.getElementById('result-banner');
+  banner.className = 'result-banner'; banner.textContent = '';
+  document.getElementById('score-side-atk').classList.remove('winner');
+  document.getElementById('score-side-def').classList.remove('winner');
+  document.getElementById('score-atk').textContent = '0.0';
+  document.getElementById('score-def').textContent = '0.0';
+  document.getElementById('score-atk-breakdown').innerHTML = '';
+  document.getElementById('score-def-breakdown').innerHTML = '';
+  document.getElementById('nexo-svg-atk').innerHTML = '';
+  document.getElementById('nexo-svg-def').innerHTML = '';
+
+  const atkArr = [d.atkCards.def, d.atkCards.mei, d.atkCards.ata];
+  const defArr = [d.defCards.def, d.defCards.mei, d.defCards.ata];
+  document.getElementById('reveal-atk-cards').innerHTML = atkArr.map((c,i)=>flipCardHTML(c,'atk-'+i)).join('');
+  document.getElementById('reveal-def-cards').innerHTML = defArr.map((c,i)=>flipCardHTML(c,'def-'+i)).join('');
+
+  showScreen('screen-reveal');
+  await wait(250);
+  if(token!==_revealToken) return;
+
+  // 1) vira as cartas linha por linha (DEF, MEI, ATA)
+  for(let i=0;i<3;i++){
+    const a = document.getElementById('flip-atk-'+i), b = document.getElementById('flip-def-'+i);
+    if(a) a.classList.add('flipped');
+    if(b) b.classList.add('flipped');
+    playTapSound();
+    await wait(230);
+    if(token!==_revealToken) return;
+  }
+  await wait(300);
+  if(token!==_revealToken) return;
+
+  // 2) linhas de NEXO surgindo com brilho
+  const nAtk = drawNexoGraph('nexo-svg-atk', d.nexoAtk, 0);
+  const nDef = drawNexoGraph('nexo-svg-def', d.nexoDef, 0);
+  await wait(Math.max(nAtk, nDef, 1)*180 + 260);
+  if(token!==_revealToken) return;
+
+  // 3) atributos somando com animação
+  animateNumber(document.getElementById('score-atk'), 0, d.attackScore, 700);
+  animateNumber(document.getElementById('score-def'), 0, d.defenseScore, 700);
+  const bdAtk = [`Ataque base: ${d.breakdownAtk.base}`, `+ Controle meia: ${d.breakdownAtk.controle}`, `+ NEXO: ${d.breakdownAtk.nexo}`];
+  if(d.breakdownAtk.reducao) bdAtk.push(`− Redução rival: ${d.breakdownAtk.reducao}`);
+  const bdDef = [`Defesa base: ${d.breakdownDef.base}`, `+ Controle meia: ${d.breakdownDef.controle}`, `+ NEXO: ${d.breakdownDef.nexo}`];
+  animateBreakdown(document.getElementById('score-atk-breakdown'), bdAtk, 100);
+  animateBreakdown(document.getElementById('score-def-breakdown'), bdDef, 100);
+  await wait(950);
+  if(token!==_revealToken) return;
+
+  // 4) resultado com efeito de impacto
+  document.getElementById('score-side-atk').classList.toggle('winner', d.gol);
+  document.getElementById('score-side-def').classList.toggle('winner', !d.gol);
+  banner.className = 'result-banner ' + (d.gol?'gol':'nogol') + ' impact';
+  banner.textContent = d.gol ? ('⚽ GOL de ' + state.players[d.atkKey].nome + '!') : ('🛡 Defesa segura de ' + state.players[d.defKey].nome);
+  document.getElementById('reveal-placar-mini').innerHTML =
+    `<span>${state.players.p1.nome.split(' ')[0]} <b>${state.placar.p1}</b></span> · <span>${state.players.p2.nome.split(' ')[0]} <b>${state.placar.p2}</b></span>`;
+  btnContinue.disabled = false; // já dá pra avançar; a celebração roda por cima
+  await wait(500);
+  if(token!==_revealToken) return;
+
+  // 5) celebração — só é festiva quando o resultado favorece o jogador humano;
+  // contra o Computador, um resultado ruim pro jogador vira lamento, não festa.
+  const margin = d.attackScore - d.defenseScore;
+  const humanKey = 'p1';
+  const favoreceHumano = !state.vsBot || (d.gol ? d.atkKey===humanKey : d.defKey===humanKey);
+
+  if(d.gol && favoreceHumano){
+    const nexoFoiDecisivo = (d.attackScore - d.breakdownAtk.nexo) <= d.defenseScore;
+    const texto = nexoFoiDecisivo ? 'NEXUS PERFEITO!' : (margin >= 15 ? 'GOLAÇO!' : 'GOOOL!');
+    triggerGoalCelebration(texto);
+  } else if(!d.gol && favoreceHumano){
+    const texto = (d.defenseScore - d.attackScore) < 5 ? 'DEFENDEU!' : 'TRAVADO PELA DEFESA!';
+    triggerSaveCelebration(texto);
+  } else if(d.gol && !favoreceHumano){
+    // Computador marcou contra o jogador
+    const texto = margin >= 15 ? 'GOLAÇO DO COMPUTADOR...' : 'GOL SOFRIDO...';
+    triggerLamentCelebration(texto, '😖', 'concede');
+  } else {
+    // Jogador atacou e não conseguiu marcar
+    const texto = (d.defenseScore - d.attackScore) < 5 ? 'POR POUCO...' : 'NÃO FOI DESSA VEZ...';
+    triggerLamentCelebration(texto, '😔', 'miss');
+  }
+}
+function continueAfterReveal(){
+  _revealToken++; // cancela qualquer resto de cinemática pendente
+  if(state.placar.p1>=3 || state.placar.p2>=3){
+    if(state.gameMode==='wc'){
+      wcFinishMatch();
+    } else {
+      renderResultScreen();
+      showScreen('screen-result');
+    }
+    return;
+  }
+  state.rodada += 1;
+  state.atacante = defensorDe(state.atacante);
+  const sub = state.vsBot
+    ? 'Rodada ' + state.rodada + ': ' + state.players[state.atacante].nome + ' ataca.'
+    : 'Rodada ' + state.rodada + ': ' + state.players[state.atacante].nome + ' ataca. Passe o dispositivo.';
+  showCoverScreen('Próxima rodada', sub, ()=>{
+    beginRodada();
+  }, 'Continuar', 'kickoff', state.vsBot ? 2 : 5);
+}
+
+/* ---------------------- RESULT SCREEN ---------------------- */
+function renderResultScreen(){
+  const winnerKey = state.placar.p1>state.placar.p2 ? 'p1':'p2';
+  // celebração de fim de partida: festa se favorece o humano (ou no modo 2 jogadores)
+  const favoreceHumano = !state.vsBot || winnerKey==='p1';
+  const confettiEl = document.getElementById('result-confetti');
+  if(favoreceHumano){
+    spawnConfetti(confettiEl, 40);
+    playCheerSound();
+    vibrateDevice([90,50,90,50,200]);
+  } else {
+    confettiEl.innerHTML = '';
+    playCrowdUhSound();
+    vibrateDevice(140);
+  }
+  document.getElementById('result-winner').textContent = state.players[winnerKey].nome + ' venceu!';
+  document.getElementById('result-final-score').textContent =
+    state.players.p1.nome + ' ' + state.placar.p1 + ' × ' + state.placar.p2 + ' ' + state.players.p2.nome;
+
+  const golRounds = state.historico.filter(h=>h.gol);
+  const combosMap = {};
+  golRounds.forEach(h=>{
+    const key = h.atkTrioNomes.join(' + ');
+    combosMap[key] = (combosMap[key]||0) + h.nexoAtk;
+  });
+  const combosSorted = Object.entries(combosMap).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  document.getElementById('result-combos').innerHTML = combosSorted.length ?
+    combosSorted.map(([nome, nexo])=>`<div class="highlight-row"><span>${nome}</span><span class="hv">+${nexo} NEXO</span></div>`).join('')
+    : '<div class="highlight-row"><span>Nenhum gol na partida</span><span class="hv">—</span></div>';
+
+  document.getElementById('result-summary').innerHTML = `
+    <div class="highlight-row"><span>Total de rodadas</span><span class="hv">${state.historico.length}</span></div>
+    <div class="highlight-row"><span>Gols de ${state.players.p1.nome}</span><span class="hv">${state.placar.p1}</span></div>
+    <div class="highlight-row"><span>Gols de ${state.players.p2.nome}</span><span class="hv">${state.placar.p2}</span></div>
+  `;
+}
+
+nexusBoot();
+</script>
+</body>
+</html>
