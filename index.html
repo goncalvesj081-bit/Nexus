@@ -3,19 +3,29 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#F3EFE3">
-<title>NEXUS FC — 7 Confrontos</title>
+<meta name="theme-color" content="#0BA36B">
+<title>NEXUS FC — Liga dos Nexos</title>
+<meta name="description" content="Jogo de cartas de futebol: monte seu time, combine nexos entre craques e vença 7 confrontos por divisão até a Liga Lendária.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NEXUS FC">
+<meta property="og:type" content="website">
+<meta property="og:title" content="NEXUS FC — Liga dos Nexos">
+<meta property="og:description" content="Monte seu time, combine nexos entre craques e vença 7 confrontos por divisão.">
+<meta property="og:image" content="./nexus-icon.png">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="./nexus-icon.png" type="image/png">
+<link rel="apple-touch-icon" href="./nexus-icon.png">
+<link rel="manifest" href="./nexus-manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://unpkg.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2" defer></script>
 <style>
   :root{
-    --bg:#070B12; --bg-2:#0B1220;
-    --surface:#101827; --surface-2:#141E30; --surface-3:#1B2740;
-    --line:#22304A; --text:#EAF0F8; --text-dim:#93A1B8; --text-faint:#5A6880;
-    --nexo:#17E3C4; --gold:#E4BE6C; --danger:#FF5468;
-    --c-def:#4C8DFF; --c-mei:#A78BFA; --c-ata:#FF5468;
+    /* fontes (as cores ficam na SKIN 3.0 no fim do arquivo) */
     --font-display:'Archivo', system-ui, sans-serif;
     --font-body:'Inter', system-ui, sans-serif;
     --font-mono:'JetBrains Mono', ui-monospace, monospace;
@@ -354,13 +364,7 @@
      refletor no topo de cada tela. Adeus navy genérico.
      ============================================================ */
   :root{
-    --bg:#07110D; --bg-2:#0B1B14;
-    --surface:#0E2018; --surface-2:#132A1F; --surface-3:#1A3728;
-    --line:#23453394;
-    --text:#F2F7F0; --text-dim:#9FB8A9; --text-faint:#5E7A6B;
-    --nexo:#3DF0B4; --gold:#FFC24B; --danger:#FF4D6A;
-    --c-def:#5EA2FF; --c-mei:#B99CFF; --c-ata:#FF6B7E;
-    --grama:#128A43; --grama-2:#0C5A2C; --cal:rgba(242,247,240,.32);
+    /* cores/gramado ficam na SKIN 3.0 no fim do arquivo */
     --font-black:'Archivo Black', 'Archivo', system-ui, sans-serif;
   }
   body{
@@ -1202,7 +1206,22 @@
 /* ---------------------- SUPABASE ---------------------- */
 const SUPABASE_URL = 'https://exxqzvkskkafqvmgofuy.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV4eHF6dmtza2thZnF2bWdvZnV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MjU3NDIsImV4cCI6MjA5OTMwMTc0Mn0.gFrN1Zh6jlJA7UWg5YZyQPlQkVu40heMvrs4Ya7Mm88';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// cliente criado sob demanda: o SDK carrega com `defer` (não bloqueia o render).
+let sb = null;
+function ensureSupabase(){
+  return new Promise((resolve)=>{
+    if(sb) return resolve(sb);
+    let tentativas = 0;
+    (function tick(){
+      if(window.supabase && window.supabase.createClient){
+        sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        return resolve(sb);
+      }
+      if(tentativas++ > 100) return resolve(null); // ~5s: segue em modo convidado
+      setTimeout(tick, 50);
+    })();
+  });
+}
 
 let CARDS = []; // carregado do Supabase (fallback local abaixo)
 
@@ -1250,14 +1269,17 @@ function showScreen(id){
    Camada única para persistência no aparelho. Recursos:
    - Chaves namespaced + versionadas (nexusfc:*), com migração automática das
      chaves antigas (nexus_perfil_local, nexus_time, ...).
-   - Fallback em memória quando o localStorage está indisponível (modo privado,
-     bloqueado ou sem cota) — o jogo continua funcionando na sessão.
+   - Fallback durável em window.name quando o localStorage está bloqueado
+     (ex.: preview em iframe de origem opaca, modo privado). window.name
+     sobrevive ao F5/reload dentro da mesma aba/frame — então o progresso NÃO
+     zera mais no preview sandbox. Último recurso: memória (só na sessão).
    - JSON à prova de corrupção: valor inválido é descartado e cai no padrão.
    - Tratamento de cota (QuotaExceeded): limpa dados voláteis e tenta de novo.
 --------------------------------------------------------------------------- */
 const NexusStore = (function(){
   const NS = 'nexusfc';
   const VERSION = 2;
+  const WNAME_MARK = 'NEXUSFC1::'; // prefixo do blob salvo em window.name
   const KEYS = {
     profile:  NS+':profile',
     time:     NS+':time',
@@ -1272,22 +1294,47 @@ const NexusStore = (function(){
     dailyWin:'nexus_daily_win', streak:'nexus_streak', apelido:'nexus_apelido'
   };
 
-  const mem = {};            // espelho/fallback em memória
-  let backend = detect();    // 'local' | 'memory'
+  const mem = {};            // espelho/working copy em memória
+  let backend = detect();    // 'local' | 'wname' | 'memory'
 
   function detect(){
+    // 1) localStorage real (aba normal / com allow-same-origin)
     try{
       const k = NS+':__t';
       window.localStorage.setItem(k,'1');
       window.localStorage.removeItem(k);
       return 'local';
-    }catch(e){ return 'memory'; }
+    }catch(e){}
+    // 2) window.name — grava aqui pra persistir apesar do sandbox
+    try{
+      const cur = window.name;
+      window.name = String(cur); // testa escrita
+      return 'wname';
+    }catch(e){}
+    // 3) só memória
+    return 'memory';
   }
+
+  // ---- backend window.name: um único blob JSON serializado em window.name ----
+  function wnameLoad(){
+    try{
+      const n = window.name || '';
+      if(n.indexOf(WNAME_MARK)===0){
+        const obj = JSON.parse(n.slice(WNAME_MARK.length));
+        if(obj && typeof obj==='object') Object.assign(mem, obj);
+      }
+    }catch(e){}
+  }
+  function wnamePersist(){
+    try{ window.name = WNAME_MARK + JSON.stringify(mem); }catch(e){}
+  }
+  if(backend==='wname') wnameLoad();
+
   function rawGet(key){
     if(backend==='local'){
       try{ return window.localStorage.getItem(key); }catch(e){ return (key in mem)?mem[key]:null; }
     }
-    return (key in mem) ? mem[key] : null;
+    return (key in mem) ? mem[key] : null; // wname/memory leem do espelho
   }
   function rawSet(key,val){
     mem[key] = val; // sempre espelha na memória
@@ -1296,14 +1343,17 @@ const NexusStore = (function(){
       catch(e){
         // cota estourada ou bloqueado: descarta o volátil e tenta 1x
         try{ window.localStorage.removeItem(KEYS.dailyWin); window.localStorage.setItem(key,val); return true; }
-        catch(e2){ backend='memory'; console.warn('[NexusStore] localStorage indisponível — usando memória.'); return false; }
+        catch(e2){ backend='wname'; wnameLoad(); mem[key]=val; wnamePersist();
+          console.warn('[NexusStore] localStorage indisponível — migrando para window.name.'); return true; }
       }
     }
+    if(backend==='wname') wnamePersist();
     return true;
   }
   function rawDel(key){
     delete mem[key];
     if(backend==='local'){ try{ window.localStorage.removeItem(key); }catch(e){} }
+    else if(backend==='wname'){ wnamePersist(); }
   }
   function getJSON(key, fb){
     const raw = rawGet(key);
@@ -1349,8 +1399,10 @@ const NexusStore = (function(){
 
 /* ---------------------- BOOT / LOGIN / CONVIDADO ---------------------- */
 async function nexusBoot(){
+  await ensureSupabase(); // aguarda o SDK deferido (ou segue como convidado)
   await nexusCarregarCartas();
   try{
+    if(!sb) throw new Error('sem supabase');
     const { data:{ session } } = await sb.auth.getSession();
     if(session){ await nexusEntrarLogado(); return; }
   }catch(e){}
@@ -1400,12 +1452,19 @@ async function nexusEntrarLogado(){
   goHome();
 }
 async function nexusCarregarCartas(){
+  // base local (roster completo). O banco, quando disponível, tem prioridade
+  // para as cartas que existem nele; as demais entram pelo roster local.
+  // Assim dá pra ampliar o elenco sem depender de escrita no Supabase.
+  const mapa = new Map(CARDS_FALLBACK.map(c=>[c.id, c]));
   try{
-    const { data, error } = await sb.from('cards').select('*').order('posicao').order('nome');
-    if(!error && data && data.length){ CARDS = data; return; }
-  }catch(e){}
-  console.warn('Usando cartas locais (fallback).');
-  CARDS = CARDS_FALLBACK;
+    if(sb){
+      const { data, error } = await sb.from('cards').select('*').order('posicao').order('nome');
+      if(!error && data && data.length){
+        data.forEach(c=>mapa.set(c.id, c)); // banco sobrescreve/adiciona por id
+      }
+    }
+  }catch(e){ console.log('[v0] cartas: usando roster local (banco indisponível).'); }
+  CARDS = Array.from(mapa.values());
 }
 
 /* ---------------------- PERFIL (XP / NÍVEL / COLEÇÃO / TROFÉUS) ---------------------- */
@@ -1436,32 +1495,48 @@ function nexusCarregarPerfilLocal(){
   nexusSalvarPerfil();
 }
 async function nexusCarregarPerfil(){
+  if(!sb) return;
   const { data:{ session } } = await sb.auth.getSession();
   if(!session) return;
   try{
     const { data, error } = await sb.from('profiles').select('*').eq('user_id', session.user.id).maybeSingle();
+    if(error){ console.log('[v0] erro ao carregar perfil:', error.message, error); }
     if(!error && data){
       state.profile = { xp:data.xp||0, nivel:data.nivel||1, unlocked:data.unlocked||idsColecaoInicial(), trofeus:data.trofeus||0 };
       return;
     }
-  }catch(e){}
+  }catch(e){ console.log('[v0] exceção ao carregar perfil:', e && e.message); }
+  // primeiro acesso: cria a linha via upsert (idempotente, não duplica)
   state.profile = { xp:0, nivel:1, unlocked:idsColecaoInicial(), trofeus:0 };
-  try{
-    await sb.from('profiles').insert({ user_id: session.user.id, xp:0, nivel:1, unlocked:state.profile.unlocked, trofeus:0 });
-  }catch(e){}
+  await nexusSalvarPerfil();
 }
 async function nexusSalvarPerfil(){
   if(state.guest){
     NexusStore.setProfile(state.profile);
     return;
   }
+  if(!sb){ console.log('[v0] salvar perfil: cliente Supabase indisponível'); return; }
   try{
     const { data:{ session } } = await sb.auth.getSession();
-    if(!session) return;
-    const upd = { xp:state.profile.xp, nivel:state.profile.nivel, unlocked:state.profile.unlocked, trofeus:state.profile.trofeus };
-    try{ upd.apelido = pegarApelido() || null; }catch(e){}
-    await sb.from('profiles').update(upd).eq('user_id', session.user.id);
-  }catch(e){}
+    if(!session){ console.log('[v0] salvar perfil: sem sessão'); return; }
+    // colunas garantidas + opcionais (trofeus/apelido podem não existir no schema)
+    const base = {
+      user_id: session.user.id,
+      xp: state.profile.xp,
+      nivel: state.profile.nivel,
+      unlocked: state.profile.unlocked
+    };
+    const row = Object.assign({}, base, { trofeus: state.profile.trofeus });
+    try{ row.apelido = pegarApelido() || null; }catch(e){}
+    // upsert cria a linha se não existir e atualiza se já existir (chave: user_id)
+    let { error } = await sb.from('profiles').upsert(row, { onConflict: 'user_id' });
+    // se alguma coluna opcional não existe no schema, salva só as garantidas
+    if(error && error.code === 'PGRST204'){
+      console.log('[v0] coluna ausente no Supabase ('+error.message+'). Salvando apenas colunas básicas. Rode o SQL de migração para persistir troféus/apelido.');
+      ({ error } = await sb.from('profiles').upsert(base, { onConflict: 'user_id' }));
+    }
+    if(error){ console.log('[v0] ERRO ao salvar perfil no Supabase:', error.message, error); }
+  }catch(e){ console.log('[v0] exceção ao salvar perfil:', e && e.message); }
 }
 function cartaDesbloqueada(id){ return state.profile.unlocked.includes(id); }
 function colecaoDesbloqueada(){ return CARDS.filter(c=>cartaDesbloqueada(c.id)); }
@@ -2486,6 +2561,253 @@ const CARDS_FALLBACK = [
   {id:'best', nome:'George Best', posicao:'ATA', ataque:17, defesa:4, controle:14,
     clube:['Manchester United'], selecao:['Irlanda do Norte'], estilo:['Drible','Elegante'], geracao:'Anos 60-70', companheiros:[],
     habilidade:{nome:'O Quinto Beatle', tipo:'trio_nexo', valor:5, desc:'+5 no bônus de NEXO do trio.'}},
+
+  // ========================= EXPANSÃO: +80 JOGADORES =========================
+  // ---------- DEFENSORES (+27) ----------
+  {id:'baresi', nome:'Franco Baresi', posicao:'DEF', ataque:4, defesa:19, controle:13,
+    clube:['Milan'], selecao:['Itália'], estilo:['Líder','Defensivo'], geracao:'Anos 80-90', companheiros:['Paolo Maldini'],
+    habilidade:{nome:'Il Capitano', tipo:'rival_ataque', valor:5, desc:'Reduz o Ataque rival em 5 ao defender.'}},
+  {id:'cannavaro', nome:'Fabio Cannavaro', posicao:'DEF', ataque:6, defesa:18, controle:11,
+    clube:['Real Madrid','Juventus'], selecao:['Itália'], estilo:['Físico','Líder'], geracao:'Era 2000s', companheiros:['Roberto Carlos','Zinedine Zidane'],
+    habilidade:{nome:'Bola de Ouro', tipo:'trio_defesa', valor:5, desc:'+5 na Defesa total do trio.'}},
+  {id:'carlosalberto', nome:'Carlos Alberto', posicao:'DEF', ataque:12, defesa:14, controle:13,
+    clube:['Santos'], selecao:['Brasil'], estilo:['Líder','Ofensivo'], geracao:'Anos 60-70', companheiros:['Pelé'],
+    habilidade:{nome:'Golaço de 1970', tipo:'trio_ataque', valor:4, desc:'+4 no Ataque total do trio.'}},
+  {id:'lahm', nome:'Philipp Lahm', posicao:'DEF', ataque:10, defesa:15, controle:15,
+    clube:['Bayern de Munique'], selecao:['Alemanha'], estilo:['Versátil','Líder'], geracao:'Era Messi/Ronaldo', companheiros:['Toni Kroos'],
+    habilidade:{nome:'Capitão Universal', tipo:'trio_controle', valor:4, desc:'+4 no Controle total do trio.'}},
+  {id:'bobbymoore', nome:'Bobby Moore', posicao:'DEF', ataque:5, defesa:18, controle:12,
+    clube:['West Ham'], selecao:['Inglaterra'], estilo:['Líder','Elegante'], geracao:'Anos 60-70', companheiros:[],
+    habilidade:{nome:'Desarme Perfeito', tipo:'rival_ataque', valor:4, desc:'Reduz o Ataque rival em 4 ao defender.'}},
+  {id:'scirea', nome:'Gaetano Scirea', posicao:'DEF', ataque:6, defesa:17, controle:13,
+    clube:['Juventus'], selecao:['Itália'], estilo:['Elegante','Construtor'], geracao:'Anos 80-90', companheiros:[],
+    habilidade:{nome:'Libero Elegante', tipo:'trio_controle', valor:4, desc:'+4 no Controle total do trio.'}},
+  {id:'thuram', nome:'Lilian Thuram', posicao:'DEF', ataque:7, defesa:17, controle:10,
+    clube:['Juventus','Barcelona'], selecao:['França'], estilo:['Físico','Defensivo'], geracao:'Era 2000s', companheiros:['Zinedine Zidane','Thierry Henry'],
+    habilidade:{nome:'Muralha Francesa', tipo:'trio_defesa', valor:4, desc:'+4 na Defesa total do trio.'}},
+  {id:'rioferdinand', nome:'Rio Ferdinand', posicao:'DEF', ataque:5, defesa:18, controle:13,
+    clube:['Manchester United'], selecao:['Inglaterra'], estilo:['Elegante','Construtor'], geracao:'Era 2000s', companheiros:['Paul Scholes'],
+    habilidade:{nome:'Saída de Bola', tipo:'trio_defesa', valor:4, desc:'+4 na Defesa total do trio.'}},
+  {id:'vidic', nome:'Nemanja Vidić', posicao:'DEF', ataque:6, defesa:18, controle:8,
+    clube:['Manchester United'], selecao:['Sérvia'], estilo:['Físico','Aéreo'], geracao:'Era 2000s', companheiros:['Rio Ferdinand'],
+    habilidade:{nome:'Xerife', tipo:'rival_ataque', valor:4, desc:'Reduz o Ataque rival em 4 ao defender.'}},
+  {id:'terry', nome:'John Terry', posicao:'DEF', ataque:6, defesa:17, controle:10,
+    clube:['Chelsea'], selecao:['Inglaterra'], estilo:['Líder','Aéreo'], geracao:'Era 2000s', companheiros:['Frank Lampard'],
+    habilidade:{nome:'Capitão de Stamford', tipo:'rival_ataque', valor:4, desc:'Reduz o Ataque rival em 4 ao defender.'}},
+  {id:'chiellini', nome:'Giorgio Chiellini', posicao:'DEF', ataque:4, defesa:18, controle:10,
+    clube:['Juventus'], selecao:['Itália'], estilo:['Físico','Líder'], geracao:'Era Messi/Ronaldo', companheiros:['Andrea Pirlo'],
+    habilidade:{nome:'Arte da Marcação', tipo:'rival_ataque', valor:4, desc:'Reduz o Ataque rival em 4 ao defender.'}},
+  {id:'bonucci', nome:'Leonardo Bonucci', posicao:'DEF', ataque:7, defesa:16, controle:14,
+    clube:['Juventus'], selecao:['Itália'], estilo:['Construtor','Passador'], geracao:'Era Messi/Ronaldo', companheiros:['Giorgio Chiellini'],
+    habilidade:{nome:'Lançamento de Zaga', tipo:'trio_controle', valor:4, desc:'+4 no Controle total do trio.'}},
+  {id:'jordialba', nome:'Jordi Alba', posicao:'DEF', ataque:12, defesa:13, controle:13,
+    clube:['Barcelona'], selecao:['Espanha'], estilo:['Velocista','Ofensivo'], geracao:'Era Messi/Ronaldo', companheiros:['Lionel Messi','Xavi','Andrés Iniesta'],
+    habilidade:{nome:'Diagonal com o Messi', tipo:'trio_ataque', valor:4, desc:'+4 no Ataque total do trio.'}},
+  {id:'pique', nome:'Gerard Piqué', posicao:'DEF', ataque:6, defesa:17, controle:13,
+    clube:['Barcelona','Manchester United'], selecao:['Espanha'], estilo:['Construtor','Líder'], geracao:'Era Messi/Ronaldo', companheiros:['Carles Puyol','Xavi','Andrés Iniesta'],
+    habilidade:{nome:'Parede Culé', tipo:'trio_defesa', valor:4, desc:'+4 na Defesa total do trio.'}},
+  {id:'alaba', nome:'David Alaba', posicao:'DEF', ataque:11, defesa:14, controle:14,
+    clube:['Bayern de Munique','Real Madrid'], selecao:['Áustria'], estilo:['Versátil','Ofensivo'], geracao:'Era Messi/Ronaldo', companheiros:['Philipp Lahm'],
+    habilidade:{nome:'Coringa Tático', tipo:'trio_controle', valor:4, desc:'+4 no Controle total do trio.'}},
+  {id:'kylewalker', nome:'Kyle Walker', posicao:'DEF', ataque:11, defesa:14, controle:10,
+    clube:['Man City'], selecao:['Inglaterra'], estilo:['Velocista','Físico'], geracao:'Nova Geração', companheiros:['Rodri','Kevin De Bruyne'],
+    habilidade:{nome:'Turbo na Recomposição', tipo:'trio_ataque', valor:3, desc:'+3 no Ataque total do trio.'}},
+  {id:'laporte', nome:'Aymeric Laporte', posicao:'DEF', ataque:5, defesa:16, controle:13,
+    clube:['Man City'], selecao:['Espanha'], estilo:['Construtor','Elegante'], geracao:'Nova Geração', companheiros:['Rodri'],
+    habilidade:{nome:'Primeiro Passe', tipo:'trio_controle', valor:4, desc:'+4 no Controle total do trio.'}},
+  {id:'militao', nome:'Éder Militão', posicao:'DEF', ataque:7, defesa:16, controle:10,
+    clube:['Real Madrid'], selecao:['Brasil'], estilo:['Físico','Aéreo'], geracao:'Nova Geração', companheiros:['Vinícius Júnior','Jude Bellingham'],
+    habilidade:{nome:'Velocidade de Zaga', tipo:'trio_defesa', valor:4, desc:'+4 na Defesa total do trio.'}},
+  {id:'koulibaly', nome:'Kalidou Koulibaly', posicao:'DEF', ataque:6, defesa:17, controle:9,
+    clube:['Napoli'], selecao:['Senegal'], estilo:['Físico','Defensivo'], geracao:'Era Messi/Ronaldo', companheiros:[],
+    habilidade:{nome:'Torre Africana', tipo:'rival_ataque', valor:4, desc:'Reduz o Ataque rival em 4 ao defender.'}},
+  {id:'ayala', nome:'Roberto Ayala', posicao:'DEF', ataque:5, defesa:16, controle:10,
+    clube:['Valencia'], selecao:['Argentina'], estilo:['Defensivo','Líder'], geracao:'Era 2000s', companheiros:[],
+    habilidade:{nome:'El Ratón', tipo:'rival_ataque', valor:3, desc:'Reduz o Ataque rival em 3 ao defender.'}},
+  {id:'rcarvalho', nome:'Ricardo Carvalho', posicao:'DEF', ataque:5, defesa:16, controle:11,
+    clube:['Porto','Chelsea','Real Madrid'], selecao:['Portugal'], estilo:['Defensivo','Elegante'], geracao:'Era 2000s', companheiros:['Cristiano Ronaldo'],
+    habilidade:{nome:'Marcação Cirúrgica', tipo:'trio_defesa', valor:3, desc:'+3 na Defesa total do trio.'}},
+  {id:'ashleycole', nome:'Ashley Cole', posicao:'DEF', ataque:10, defesa:15, controle:11,
+    clube:['Arsenal','Chelsea'], selecao:['Inglaterra'], estilo:['Velocista','Defensivo'], geracao:'Era 2000s', companheiros:['John Terry','Frank Lampard'],
+    habilidade:{nome:'Lateral Blindado', tipo:'trio_ataque', valor:3, desc:'+3 no Ataque total do trio.'}},
+  {id:'carvajal', nome:'Dani Carvajal', posicao:'DEF', ataque:11, defesa:14, controle:11,
+    clube:['Real Madrid'], selecao:['Espanha'], estilo:['Físico','Ofensivo'], geracao:'Nova Geração', companheiros:['Luka Modrić','Toni Kroos','Jude Bellingham'],
+    habilidade:{nome:'Ala de Champions', tipo:'trio_ataque', valor:3, desc:'+3 no Ataque total do trio.'}},
+  {id:'rudiger', nome:'Antonio Rüdiger', posicao:'DEF', ataque:7, defesa:16, controle:9,
+    clube:['Chelsea','Real Madrid'], selecao:['Alemanha'], estilo:['Físico','Líder'], geracao:'Nova Geração', companheiros:['Toni Kroos'],
+    habilidade:{nome:'Marcação Feroz', tipo:'rival_ataque', valor:3, desc:'Reduz o Ataque rival em 3 ao defender.'}},
+  {id:'marquinhos', nome:'Marquinhos', posicao:'DEF', ataque:5, defesa:17, controle:12,
+    clube:['PSG'], selecao:['Brasil'], estilo:['Elegante','Construtor'], geracao:'Nova Geração', companheiros:['Neymar','Achraf Hakimi','Kylian Mbappé'],
+    habilidade:{nome:'Capitão Parisiense', tipo:'trio_defesa', valor:4, desc:'+4 na Defesa total do trio.'}},
+  {id:'mascherano', nome:'Javier Mascherano', posicao:'DEF', ataque:6, defesa:15, controle:12,
+    clube:['Liverpool','Barcelona'], selecao:['Argentina'], estilo:['Físico','Defensivo'], geracao:'Era Messi/Ronaldo', companheiros:['Lionel Messi','Luis Suárez'],
+    habilidade:{nome:'Jefecito', tipo:'trio_controle', valor:3, desc:'+3 no Controle total do trio.'}},
+  {id:'robertson', nome:'Andrew Robertson', posicao:'DEF', ataque:11, defesa:14, controle:12,
+    clube:['Liverpool'], selecao:['Escócia'], estilo:['Velocista','Físico'], geracao:'Nova Geração', companheiros:['Virgil van Dijk','Mohamed Salah','Trent Alexander-Arnold'],
+    habilidade:{nome:'Motor pela Esquerda', tipo:'trio_ataque', valor:4, desc:'+4 no Ataque total do trio.'}},
+
+  // ---------- MEIO-CAMPISTAS (+27) ----------
+  {id:'platini', nome:'Michel Platini', posicao:'MEI', ataque:16, defesa:7, controle:18,
+    clube:['Juventus'], selecao:['França'], estilo:['Maestro','Finalizador'], geracao:'Anos 80-90', companheiros:[],
+    habilidade:{nome:'Le Roi', tipo:'trio_nexo', valor:6, desc:'+6 no bônus de NEXO do trio.'}},
+  {id:'zico', nome:'Zico', posicao:'MEI', ataque:15, defesa:7, controle:18,
+    clube:['Flamengo'], selecao:['Brasil'], estilo:['Maestro','Criador'], geracao:'Anos 80-90', companheiros:[],
+    habilidade:{nome:'Galinho de Quintino', tipo:'trio_ataque', valor:5, desc:'+5 no Ataque total do trio.'}},
+  {id:'cruyff', nome:'Johan Cruyff', posicao:'MEI', ataque:16, defesa:8, controle:19,
+    clube:['Ajax','Barcelona'], selecao:['Holanda'], estilo:['Maestro','Criador'], geracao:'Anos 60-70', companheiros:[],
+    habilidade:{nome:'Futebol Total', tipo:'trio_nexo', valor:6, desc:'+6 no bônus de NEXO do trio.'}},
+  {id:'rijkaard', nome:'Frank Rijkaard', posicao:'MEI', ataque:12, defesa:12, controle:16,
+    clube:['Milan','Ajax'], selecao:['Holanda'], estilo:['Box-to-box','Físico'], geracao:'Anos 80-90', companheiros:['Ruud Gullit','Paolo Maldini'],
+    habilidade:{nome:'Equilíbrio Holandês', tipo:'trio_controle', valor:4, desc:'+4 no Controle total do trio.'}},
+  {id:'gullit', nome:'Ruud Gullit', posicao:'MEI', ataque:14, defesa:10, controle:16,
+    clube:['Milan'], selecao:['Holanda'], estilo:['Físico','Ofensivo'], geracao:'Anos 80-90', companheiros:['Frank Rijkaard','Paolo Maldini'],
+    habilidade:{nome:'Trança Dourada', tipo:'trio_ataque', valor:4, desc:'+4 no Ataque total do trio.'}},
+  {id:'seedorf', nome:'Clarence Seedorf', posicao:'MEI', ataque:12, defesa:9, controle:17,
+    clube:['Milan','Real Madrid','Ajax'], selecao:['Holanda'], estilo:['Box-to-box','Passador'], geracao:'Era 2000s', companheiros:['Paolo Maldini','Andrea Pirlo'],
+    habilidade:{nome:'Quatro Champions', tipo:'trio_controle', valor:4, desc:'+4 no Controle total do trio.'}},
+  {id:'pogba', nome:'Paul Pogba', posicao:'MEI', ataque:13, defesa:9, controle:16,
+    clube:['Juventus','Manchester United'], selecao:['França'], estilo:['Box-to-box','Físico'], geracao:'Era Messi/Ronaldo', companheiros:['Kylian Mbappé'],
+    habilidade:{nome:'La Pioche', tipo:'trio_nexo', valor:4, desc:'+4 no bônus de NEXO do trio.'}},
+  {id:'kante', nome:'N\'Golo Kanté', posicao:'MEI', ataque:7, defesa:14, controle:15,
+    clube:['Chelsea','Leicester'], selecao:['França'], estilo:['Controlador','Físico'], geracao:'Era Messi/Ronaldo', companheiros:['Paul Pogba','Eden Hazard'],
+    habilidade:{nome:'Aspirador de Bolas', tipo:'trio_defesa', valor:4, desc:'+4 na Defesa total do trio.'}},
+  {id:'busquets', nome:'Sergio Busquets', posicao:'MEI', ataque:7, defesa:12, controle:18,
+    clube:['Barcelona'], selecao:['Espanha'], estilo:['Controlador','Passador'], geracao:'Era Messi/Ronaldo', companheiros:['Xavi','Andrés Iniesta','Lionel Messi','Gerard Piqué'],
+    habilidade:{nome:'Metrônomo', tipo:'trio_controle', valor:5, desc:'+5 no Controle total do trio.'}},
+  {id:'schweinsteiger', nome:'Bastian Schweinsteiger', posicao:'MEI', ataque:11, defesa:12, controle:16,
+    clube:['Bayern de Munique'], selecao:['Alemanha'], estilo:['Box-to-box','Líder'], geracao:'Era Messi/Ronaldo', companheiros:['Philipp Lahm','Toni Kroos'],
+    habilidade:{nome:'Coração Bávaro', tipo:'trio_controle', valor:4, desc:'+4 no Controle total do trio.'}},
+  {id:'yayatoure', nome:'Yaya Touré', posicao:'MEI', ataque:14, defesa:11, controle:16,
+    clube:['Barcelona','Man City'], selecao:['Costa do Marfim'], estilo:['Físico','Box-to-box'], geracao:'Era Messi/Ronaldo', companheiros:[],
+    habilidade:{nome:'Trem-Bala', tipo:'trio_ataque', valor:4, desc:'+4 no Ataque total do trio.'}},
+  {id:'ballack', nome:'Michael Ballack', posicao:'MEI', ataque:14, defesa:10, controle:15,
+    clube:['Bayern de Munique','Chelsea'], selecao:['Alemanha'], estilo:['Box-to-box','Ofensivo'], geracao:'Era 2000s', companheiros:['John Terry','Frank Lampard'],
+    habilidade:{nome:'Chegada de Área', tipo:'trio_ataque', valor:4, desc:'+4 no Ataque total do trio.'}},
+  {id:'roykeane', nome:'Roy Keane', posicao:'MEI', ataque:10, defesa:13, controle:15,
+    clube:['Manchester United'], selecao:['Irlanda'], estilo:['Líder','Físico'], geracao:'Era 2000s', companheiros:['Paul Scholes','Rio Ferdinand'],
+    habilidade:{nome:'Capitão de Ferro', tipo:'trio_defesa', valor:4, desc:'+4 na Defesa total do trio.'}},
+  {id:'vieira', nome:'Patrick Vieira', posicao:'MEI', ataque:11, defesa:13, controle:15,
+    clube:['Arsenal'], selecao:['França'], estilo:['Controlador','Físico'], geracao:'Era 2000s', companheiros:['Thierry Henry'],
+    habilidade:{nome:'Dono do Meio', tipo:'trio_controle', valor:4, desc:'+4 no Controle total do trio.'}},
+  {id:'deco', nome:'Deco', posicao:'MEI', ataque:12, defesa:8, controle:17,
+    clube:['Porto','Barcelona','Chelsea'], selecao:['Portugal'], estilo:['Criador','Passador'], geracao:'Era 2000s', companheiros:['Ronaldinho','Xavi'],
+    habilidade:{nome:'Cérebro do Jogo', tipo:'trio_nexo', valor:4, desc:'+4 no bônus de NEXO do trio.'}},
+  {id:'ruicosta', nome:'Rui Costa', posicao:'MEI', ataque:14, defesa:7, controle:17,
+    clube:['Milan','Fiorentina'], selecao:['Portugal'], estilo:['Maestro','Criador'], geracao:'Era 2000s', companheiros:['Paolo Maldini','Andrea Pirlo'],
+    habilidade:{nome:'Maestro Luso', tipo:'trio_nexo', valor:4, desc:'+4 no bônus de NEXO do trio.'}},
+  {id:'riquelme', nome:'Juan Román Riquelme', posicao:'MEI', ataque:15, defesa:6, controle:18,
+    clube:['Boca Juniors','Villarreal'], selecao:['Argentina'], estilo:['Maestro','Elegante'], geracao:'Era 2000s', companheiros:[],
+    habilidade:{nome:'Último Camisa 10', tipo:'trio_nexo', valor:5, desc:'+5 no bônus de NEXO do trio.'}},
+  {id:'ozil', nome:'Mesut Özil', posicao:'MEI', ataque:14, defesa:6, controle:17,
+    clube:['Real Madrid','Arsenal'], selecao:['Alemanha'], estilo:['Criador','Passador'], geracao:'Era Messi/Ronaldo', companheiros:['Cristiano Ronaldo','Toni Kroos'],
+    habilidade:{nome:'Assistência Cirúrgica', tipo:'trio_nexo', valor:5, desc:'+5 no bônus de NEXO do trio.'}},
+  {id:'davidsilva', nome:'David Silva', posicao:'MEI', ataque:13, defesa:7, controle:18,
+    clube:['Man City','Valencia'], selecao:['Espanha'], estilo:['Criador','Drible'], geracao:'Era Messi/Ronaldo', companheiros:['Kevin De Bruyne','Sergio Agüero'],
+    habilidade:{nome:'El Mago', tipo:'trio_controle', valor:5, desc:'+5 no Controle total do trio.'}},
+  {id:'fabregas', nome:'Cesc Fàbregas', posicao:'MEI', ataque:12, defesa:8, controle:17,
+    clube:['Arsenal','Barcelona','Chelsea'], selecao:['Espanha'], estilo:['Criador','Passador'], geracao:'Era Messi/Ronaldo', companheiros:['Thierry Henry','Xavi','Andrés Iniesta'],
+    habilidade:{nome:'Passe Vertical', tipo:'trio_nexo', valor:4, desc:'+4 no bônus de NEXO do trio.'}},
+  {id:'vidal', nome:'Arturo Vidal', posicao:'MEI', ataque:13, defesa:11, controle:14,
+    clube:['Juventus','Bayern de Munique','Barcelona'], selecao:['Chile'], estilo:['Box-to-box','Físico'], geracao:'Era Messi/Ronaldo', companheiros:[],
+    habilidade:{nome:'Rei Arturo', tipo:'trio_ataque', valor:3, desc:'+3 no Ataque total do trio.'}},
+  {id:'verratti', nome:'Marco Verratti', posicao:'MEI', ataque:8, defesa:10, controle:17,
+    clube:['PSG'], selecao:['Itália'], estilo:['Controlador','Passador'], geracao:'Era Messi/Ronaldo', companheiros:['Neymar','Kylian Mbappé','Marquinhos'],
+    habilidade:{nome:'Gafanhoto', tipo:'trio_controle', valor:4, desc:'+4 no Controle total do trio.'}},
+  {id:'gundogan', nome:'İlkay Gündoğan', posicao:'MEI', ataque:12, defesa:9, controle:16,
+    clube:['Man City','Barcelona'], selecao:['Alemanha'], estilo:['Passador','Criador'], geracao:'Nova Geração', companheiros:['Rodri','Kevin De Bruyne'],
+    habilidade:{nome:'Chegada Surpresa', tipo:'trio_controle', valor:4, desc:'+4 no Controle total do trio.'}},
+  {id:'bernardosilva', nome:'Bernardo Silva', posicao:'MEI', ataque:13, defesa:8, controle:17,
+    clube:['Man City'], selecao:['Portugal'], estilo:['Drible','Criador'], geracao:'Nova Geração', companheiros:['Rodri','Kevin De Bruyne','Bruno Fernandes'],
+    habilidade:{nome:'Formiguinha', tipo:'trio_nexo', valor:4, desc:'+4 no bônus de NEXO do trio.'}},
+  {id:'brunofernandes', nome:'Bruno Fernandes', posicao:'MEI', ataque:15, defesa:8, controle:16,
+    clube:['Manchester United'], selecao:['Portugal'], estilo:['Criador','Finalizador'], geracao:'Nova Geração', companheiros:['Cristiano Ronaldo','Bernardo Silva'],
+    habilidade:{nome:'Chegada de Área', tipo:'trio_ataque', valor:4, desc:'+4 no Ataque total do trio.'}},
+  {id:'odegaard', nome:'Martin Ødegaard', posicao:'MEI', ataque:13, defesa:7, controle:17,
+    clube:['Arsenal','Real Madrid'], selecao:['Noruega'], estilo:['Maestro','Criador'], geracao:'Nova Geração', companheiros:['Declan Rice','Bukayo Saka'],
+    habilidade:{nome:'Capitão Gunner', tipo:'trio_nexo', valor:4, desc:'+4 no bônus de NEXO do trio.'}},
+  {id:'valverde', nome:'Federico Valverde', posicao:'MEI', ataque:14, defesa:11, controle:15,
+    clube:['Real Madrid'], selecao:['Uruguai'], estilo:['Box-to-box','Físico'], geracao:'Nova Geração', companheiros:['Luka Modrić','Jude Bellingham','Vinícius Júnior'],
+    habilidade:{nome:'Pajarito', tipo:'trio_ataque', valor:4, desc:'+4 no Ataque total do trio.'}},
+
+  // ---------- ATACANTES (+26) ----------
+  {id:'vanbasten', nome:'Marco van Basten', posicao:'ATA', ataque:19, defesa:5, controle:13,
+    clube:['Milan'], selecao:['Holanda'], estilo:['Finalizador','Elegante'], geracao:'Anos 80-90', companheiros:['Ruud Gullit','Frank Rijkaard'],
+    habilidade:{nome:'Voleio Impossível', tipo:'trio_ataque', valor:5, desc:'+5 no Ataque total do trio.'}},
+  {id:'distefano', nome:'Alfredo Di Stéfano', posicao:'ATA', ataque:18, defesa:8, controle:15,
+    clube:['Real Madrid'], selecao:['Argentina'], estilo:['Finalizador','Criador'], geracao:'Anos 60-70', companheiros:[],
+    habilidade:{nome:'Saeta Rubia', tipo:'trio_nexo', valor:5, desc:'+5 no bônus de NEXO do trio.'}},
+  {id:'eusebio', nome:'Eusébio', posicao:'ATA', ataque:19, defesa:4, controle:12,
+    clube:['Benfica'], selecao:['Portugal'], estilo:['Finalizador','Velocista'], geracao:'Anos 60-70', companheiros:[],
+    habilidade:{nome:'Pantera Negra', tipo:'trio_ataque', valor:5, desc:'+5 no Ataque total do trio.'}},
+  {id:'gerdmuller', nome:'Gerd Müller', posicao:'ATA', ataque:19, defesa:3, controle:10,
+    clube:['Bayern de Munique'], selecao:['Alemanha'], estilo:['Oportunista','Finalizador'], geracao:'Anos 60-70', companheiros:['Franz Beckenbauer'],
+    habilidade:{nome:'Der Bomber', tipo:'trio_ataque', valor:5, desc:'+5 no Ataque total do trio.'}},
+  {id:'batistuta', nome:'Gabriel Batistuta', posicao:'ATA', ataque:18, defesa:4, controle:10,
+    clube:['Fiorentina','Roma'], selecao:['Argentina'], estilo:['Finalizador','Físico'], geracao:'Era 2000s', companheiros:[],
+    habilidade:{nome:'Batigol', tipo:'trio_ataque', valor:4, desc:'+4 no Ataque total do trio.'}},
+  {id:'shevchenko', nome:'Andriy Shevchenko', posicao:'ATA', ataque:18, defesa:5, controle:12,
+    clube:['Milan'], selecao:['Ucrânia'], estilo:['Finalizador','Velocista'], geracao:'Era 2000s', companheiros:['Paolo Maldini','Andrea Pirlo','Alessandro Nesta'],
+    habilidade:{nome:'Sheva', tipo:'trio_ataque', valor:4, desc:'+4 no Ataque total do trio.'}},
+  {id:'raul', nome:'Raúl', posicao:'ATA', ataque:16, defesa:6, controle:13,
+    clube:['Real Madrid'], selecao:['Espanha'], estilo:['Finalizador','Oportunista'], geracao:'Era 2000s', companheiros:['Zinedine Zidane','Roberto Carlos'],
+    habilidade:{nome:'O Furacão', tipo:'trio_nexo', valor:4, desc:'+4 no bônus de NEXO do trio.'}},
+  {id:'vannistelrooy', nome:'Ruud van Nistelrooy', posicao:'ATA', ataque:18, defesa:3, controle:10,
+    clube:['Manchester United','Real Madrid'], selecao:['Holanda'], estilo:['Finalizador','Oportunista'], geracao:'Era 2000s', companheiros:['Paul Scholes'],
+    habilidade:{nome:'Matador da Área', tipo:'trio_ataque', valor:4, desc:'+4 no Ataque total do trio.'}},
+  {id:'delpiero', nome:'Alessandro Del Piero', posicao:'ATA', ataque:17, defesa:5, controle:14,
+    clube:['Juventus'], selecao:['Itália'], estilo:['Finalizador','Elegante'], geracao:'Era 2000s', companheiros:[],
+    habilidade:{nome:'Del Piero Zone', tipo:'trio_nexo', valor:4, desc:'+4 no bônus de NEXO do trio.'}},
+  {id:'inzaghi', nome:'Filippo Inzaghi', posicao:'ATA', ataque:17, defesa:3, controle:9,
+    clube:['Milan','Juventus'], selecao:['Itália'], estilo:['Oportunista','Finalizador'], geracao:'Era 2000s', companheiros:['Paolo Maldini','Andrea Pirlo'],
+    habilidade:{nome:'Faro de Gol', tipo:'trio_ataque', valor:4, desc:'+4 no Ataque total do trio.'}},
+  {id:'davidvilla', nome:'David Villa', posicao:'ATA', ataque:17, defesa:5, controle:13,
+    clube:['Valencia','Barcelona'], selecao:['Espanha'], estilo:['Finalizador','Velocista'], geracao:'Era Messi/Ronaldo', companheiros:['Xavi','Andrés Iniesta','Lionel Messi'],
+    habilidade:{nome:'El Guaje', tipo:'trio_ataque', valor:4, desc:'+4 no Ataque total do trio.'}},
+  {id:'torres', nome:'Fernando Torres', posicao:'ATA', ataque:16, defesa:5, controle:12,
+    clube:['Liverpool','Chelsea'], selecao:['Espanha'], estilo:['Velocista','Finalizador'], geracao:'Era Messi/Ronaldo', companheiros:['Steven Gerrard','Xavi'],
+    habilidade:{nome:'El Niño', tipo:'trio_ataque', valor:4, desc:'+4 no Ataque total do trio.'}},
+  {id:'drogba', nome:'Didier Drogba', posicao:'ATA', ataque:18, defesa:7, controle:11,
+    clube:['Chelsea'], selecao:['Costa do Marfim'], estilo:['Físico','Finalizador'], geracao:'Era Messi/Ronaldo', companheiros:['Frank Lampard','John Terry'],
+    habilidade:{nome:'Guerreiro', tipo:'trio_ataque', valor:4, desc:'+4 no Ataque total do trio.'}},
+  {id:'ibrahimovic', nome:'Zlatan Ibrahimović', posicao:'ATA', ataque:18, defesa:6, controle:14,
+    clube:['Milan','Barcelona','PSG','Manchester United'], selecao:['Suécia'], estilo:['Físico','Finalizador'], geracao:'Era Messi/Ronaldo', companheiros:[],
+    habilidade:{nome:'Ego de Zlatan', tipo:'trio_ataque', valor:5, desc:'+5 no Ataque total do trio.'}},
+  {id:'aguero', nome:'Sergio Agüero', posicao:'ATA', ataque:18, defesa:4, controle:13,
+    clube:['Man City','Atlético de Madrid'], selecao:['Argentina'], estilo:['Finalizador','Velocista'], geracao:'Era Messi/Ronaldo', companheiros:['David Silva','Kevin De Bruyne'],
+    habilidade:{nome:'Kun 93:20', tipo:'trio_ataque', valor:4, desc:'+4 no Ataque total do trio.'}},
+  {id:'benzema', nome:'Karim Benzema', posicao:'ATA', ataque:18, defesa:5, controle:15,
+    clube:['Real Madrid'], selecao:['França'], estilo:['Finalizador','Criador'], geracao:'Era Messi/Ronaldo', companheiros:['Cristiano Ronaldo','Luka Modrić','Toni Kroos','Vinícius Júnior'],
+    habilidade:{nome:'O Gato', tipo:'trio_nexo', valor:5, desc:'+5 no bônus de NEXO do trio.'}},
+  {id:'lewandowski', nome:'Robert Lewandowski', posicao:'ATA', ataque:19, defesa:5, controle:12,
+    clube:['Bayern de Munique','Barcelona'], selecao:['Polônia'], estilo:['Finalizador','Oportunista'], geracao:'Era Messi/Ronaldo', companheiros:[],
+    habilidade:{nome:'Cinco em Nove Minutos', tipo:'trio_ataque', valor:5, desc:'+5 no Ataque total do trio.'}},
+  {id:'cavani', nome:'Edinson Cavani', posicao:'ATA', ataque:17, defesa:5, controle:10,
+    clube:['Napoli','PSG'], selecao:['Uruguai'], estilo:['Físico','Finalizador'], geracao:'Era Messi/Ronaldo', companheiros:['Neymar','Kylian Mbappé','Luis Suárez'],
+    habilidade:{nome:'El Matador', tipo:'trio_ataque', valor:4, desc:'+4 no Ataque total do trio.'}},
+  {id:'robben', nome:'Arjen Robben', posicao:'ATA', ataque:17, defesa:4, controle:14,
+    clube:['Bayern de Munique','Real Madrid','Chelsea'], selecao:['Holanda'], estilo:['Velocista','Drible'], geracao:'Era Messi/Ronaldo', companheiros:['Franck Ribéry','Philipp Lahm'],
+    habilidade:{nome:'Corte da Direita', tipo:'trio_ataque', valor:4, desc:'+4 no Ataque total do trio.'}},
+  {id:'ribery', nome:'Franck Ribéry', posicao:'ATA', ataque:15, defesa:5, controle:15,
+    clube:['Bayern de Munique'], selecao:['França'], estilo:['Drible','Velocista'], geracao:'Era Messi/Ronaldo', companheiros:['Arjen Robben','Philipp Lahm'],
+    habilidade:{nome:'Ribéron', tipo:'trio_nexo', valor:4, desc:'+4 no bônus de NEXO do trio.'}},
+  {id:'rooney', nome:'Wayne Rooney', posicao:'ATA', ataque:17, defesa:7, controle:14,
+    clube:['Manchester United'], selecao:['Inglaterra'], estilo:['Físico','Finalizador'], geracao:'Era Messi/Ronaldo', companheiros:['Cristiano Ronaldo','Paul Scholes'],
+    habilidade:{nome:'Bicicleta de Manchester', tipo:'trio_ataque', valor:4, desc:'+4 no Ataque total do trio.'}},
+  {id:'bale', nome:'Gareth Bale', posicao:'ATA', ataque:17, defesa:5, controle:13,
+    clube:['Tottenham','Real Madrid'], selecao:['País de Gales'], estilo:['Velocista','Finalizador'], geracao:'Era Messi/Ronaldo', companheiros:['Cristiano Ronaldo','Luka Modrić'],
+    habilidade:{nome:'Expresso Galês', tipo:'trio_ataque', valor:4, desc:'+4 no Ataque total do trio.'}},
+  {id:'hazard', nome:'Eden Hazard', posicao:'ATA', ataque:16, defesa:5, controle:16,
+    clube:['Chelsea','Real Madrid'], selecao:['Bélgica'], estilo:['Drible','Criador'], geracao:'Era Messi/Ronaldo', companheiros:['N\'Golo Kanté','Kevin De Bruyne'],
+    habilidade:{nome:'Drible Curto', tipo:'trio_nexo', valor:4, desc:'+4 no bônus de NEXO do trio.'}},
+  {id:'saka', nome:'Bukayo Saka', posicao:'ATA', ataque:15, defesa:5, controle:14,
+    clube:['Arsenal'], selecao:['Inglaterra'], estilo:['Velocista','Drible'], geracao:'Nova Geração', companheiros:['Declan Rice','Martin Ødegaard'],
+    habilidade:{nome:'Starboy', tipo:'trio_ataque', valor:4, desc:'+4 no Ataque total do trio.'}},
+  {id:'lautaro', nome:'Lautaro Martínez', posicao:'ATA', ataque:16, defesa:5, controle:11,
+    clube:['Internazionale'], selecao:['Argentina'], estilo:['Finalizador','Físico'], geracao:'Nova Geração', companheiros:['Lionel Messi'],
+    habilidade:{nome:'El Toro', tipo:'trio_ataque', valor:4, desc:'+4 no Ataque total do trio.'}},
+  {id:'rafaelleao', nome:'Rafael Leão', posicao:'ATA', ataque:16, defesa:4, controle:13,
+    clube:['Milan'], selecao:['Portugal'], estilo:['Velocista','Drible'], geracao:'Nova Geração', companheiros:['Bruno Fernandes'],
+    habilidade:{nome:'Explosão pela Esquerda', tipo:'trio_ataque', valor:4, desc:'+4 no Ataque total do trio.'}},
 ];
 const byId = id => CARDS.find(c=>c.id===id);
 
@@ -3068,6 +3390,13 @@ function fecharRecompensa(){
 
 
 nexusBoot();
+
+/* PWA: registra o service worker para uso offline (sem travar o boot) */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('./nexus-sw.js').catch(()=>{});
+  });
+}
 </script>
 </body>
 </html>
